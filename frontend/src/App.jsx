@@ -40,6 +40,7 @@ import AssociateConsultant from './components/AssociateConsultant';
 import AdminPanel from './components/AdminPanel';
 import MetaTags from './components/MetaTags';
 import LandingPage from './components/LandingPage';
+import InformationPage from './components/InformationPage';
 
 const Home = ({ navigateTo }) => (
   <div className="animate-fade-up">
@@ -110,7 +111,8 @@ function App() {
       'neet-11th': '/neet/11th',
       'neet-12th': '/neet/12th',
       'neet-pass': '/neet/pass',
-      'landing': '/landing'
+      'landing': '/landing',
+      'jee-advanced': '/information/jee-advanced'
     };
     const path = pathMap[v] || '/';
     navigate(path);
@@ -186,6 +188,7 @@ function App() {
           <Route path="/nda" element={<CourseHubPage courseType="nda" navigateTo={navigateTo} />} />
           <Route path="/state-board" element={<CourseHubPage courseType="boards" navigateTo={navigateTo} />} />
           <Route path="/landing" element={<LandingPage navigateTo={navigateTo} />} />
+          <Route path="/information/jee-advanced" element={<InformationPage navigateTo={navigateTo} />} />
           <Route path="*" element={<Home />} />
 
         </Routes>
