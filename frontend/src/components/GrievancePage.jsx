@@ -1,13 +1,32 @@
 import React, { useState } from 'react';
+import { apiFetch } from '../api';
 
 const GrievancePage = () => {
   const [formType, setFormType] = useState('feedback'); // 'feedback' or 'grievance'
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [fields, setFields] = useState({ fullName: '', phone: '', studentId: '', category: 'Academic Quality', message: '' });
 
-  const handleSubmit = (e) => {
+  const handleFieldChange = (e) => {
+    setFields(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 5000);
+    setErrorMsg('');
+    setSubmitting(true);
+    try {
+      await apiFetch('/api/grievance/submit', {
+        method: 'POST',
+        body: JSON.stringify({ ...fields, formType }),
+      });
+      setSubmitted(true);
+    } catch (err) {
+      setErrorMsg(err.message || 'Submission failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -39,14 +58,14 @@ const GrievancePage = () => {
             <div className="bg-white rounded-[3rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
               <div className="flex border-b border-gray-100">
                 <button 
-                  onClick={() => setFormType('feedback')}
+                  onClick={() => { setFormType('feedback'); setFields(f => ({ ...f, category: 'Academic Quality' })); }}
                   className={`flex-1 py-8 text-sm font-black uppercase tracking-widest transition-all ${formType === 'feedback' ? 'text-brand-red bg-gray-50/50' : 'text-gray-400 hover:text-brand-dark'}`}
                 >
                   General Feedback
                 </button>
                 <div className="w-[1px] bg-gray-100"></div>
                 <button 
-                  onClick={() => setFormType('grievance')}
+                  onClick={() => { setFormType('grievance'); setFields(f => ({ ...f, category: 'Academic Conflict' })); }}
                   className={`flex-1 py-8 text-sm font-black uppercase tracking-widest transition-all ${formType === 'grievance' ? 'text-brand-red bg-gray-50/50' : 'text-gray-400 hover:text-brand-dark'}`}
                 >
                   Grievance Redressal
@@ -69,7 +88,10 @@ const GrievancePage = () => {
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
                         <input 
                           required 
-                          type="text" 
+                          type="text"
+                          name="fullName"
+                          value={fields.fullName}
+                          onChange={handleFieldChange}
                           placeholder="Ex: Arnav Sharma" 
                           className="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl font-bold text-brand-dark focus:bg-white focus:border-brand-red outline-none transition-all"
                         />
@@ -78,7 +100,10 @@ const GrievancePage = () => {
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Contact Number</label>
                         <input 
                           required 
-                          type="tel" 
+                          type="tel"
+                          name="phone"
+                          value={fields.phone}
+                          onChange={handleFieldChange}
                           placeholder="10-digit mobile number" 
                           className="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl font-bold text-brand-dark focus:bg-white focus:border-brand-red outline-none transition-all"
                         />
@@ -89,29 +114,36 @@ const GrievancePage = () => {
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Student ID (Optional)</label>
                         <input 
-                          type="text" 
+                          type="text"
+                          name="studentId"
+                          value={fields.studentId}
+                          onChange={handleFieldChange}
                           placeholder="BK-XXXXX" 
                           className="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl font-bold text-brand-dark focus:bg-white focus:border-brand-red outline-none transition-all"
                         />
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{formType === 'feedback' ? 'Department' : 'Grievance Type'}</label>
-                        <select className="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl font-bold text-brand-dark focus:bg-white focus:border-brand-red outline-none transition-all appearance-none">
+                        <select
+                          name="category"
+                          value={fields.category}
+                          onChange={handleFieldChange}
+                          className="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl font-bold text-brand-dark focus:bg-white focus:border-brand-red outline-none transition-all appearance-none">
                           {formType === 'feedback' ? (
                             <>
-                              <option>Academic Quality</option>
-                              <option>Administrative Support</option>
-                              <option>Infrastructure</option>
-                              <option>Digital Experience</option>
-                              <option>Other</option>
+                              <option value="Academic Quality">Academic Quality</option>
+                              <option value="Administrative Support">Administrative Support</option>
+                              <option value="Infrastructure">Infrastructure</option>
+                              <option value="Digital Experience">Digital Experience</option>
+                              <option value="Other">Other</option>
                             </>
                           ) : (
                             <>
-                              <option>Academic Conflict</option>
-                              <option>Discrimination / Conduct</option>
-                              <option>Fee Related Issue</option>
-                              <option>Resource Access</option>
-                              <option>Technical Grievance</option>
+                              <option value="Academic Conflict">Academic Conflict</option>
+                              <option value="Discrimination / Conduct">Discrimination / Conduct</option>
+                              <option value="Fee Related Issue">Fee Related Issue</option>
+                              <option value="Resource Access">Resource Access</option>
+                              <option value="Technical Grievance">Technical Grievance</option>
                             </>
                           )}
                         </select>
@@ -122,17 +154,25 @@ const GrievancePage = () => {
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Your Message</label>
                       <textarea 
                         required 
-                        rows="5" 
+                        rows="5"
+                        name="message"
+                        value={fields.message}
+                        onChange={handleFieldChange}
                         placeholder={formType === 'feedback' ? "Tell us what you liked or how we can improve..." : "Describe your grievance in detail so we can assist you better..."}
                         className="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-3xl font-bold text-brand-dark focus:bg-white focus:border-brand-red outline-none transition-all resize-none"
                       ></textarea>
                     </div>
 
+                    {errorMsg && (
+                      <p className="text-sm font-bold text-brand-red">{errorMsg}</p>
+                    )}
+
                     <button 
                       type="submit"
-                      className="w-full py-6 bg-brand-dark text-white rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-brand-dark/20 hover:bg-brand-red hover:shadow-brand-red/30 transition-all duration-500 transform active:scale-95"
+                      disabled={submitting}
+                      className="w-full py-6 bg-brand-dark text-white rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-brand-dark/20 hover:bg-brand-red hover:shadow-brand-red/30 transition-all duration-500 transform active:scale-95 disabled:opacity-60"
                     >
-                      Process {formType === 'feedback' ? 'Feedback' : 'Grievance'}
+                      {submitting ? 'Processing...' : `Process ${formType === 'feedback' ? 'Feedback' : 'Grievance'}`}
                     </button>
                   </form>
                 )}

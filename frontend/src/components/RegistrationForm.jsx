@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle } from 'lucide-react';
-import { API_BASE } from '../api';
+import { apiFetch } from '../api';
 
 
 const InputField = ({ label, placeholder, type = "text", name, value, onChange }) => (
@@ -49,14 +49,7 @@ const RegistrationForm = () => {
   const [submittedData, setSubmittedData] = useState(null);
   const [agreed, setAgreed] = useState(false);
 
-  // OTP States
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [otpValue, setOtpValue] = useState('');
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
-
   const handleChange = (name, value) => {
-    // Validate: Only allow numbers for the mobile field
     if (name === 'mobile') {
       const numericValue = value.replace(/[^0-9]/g, '').slice(0, 10);
       setFormData(prev => ({ ...prev, [name]: numericValue }));
@@ -65,40 +58,9 @@ const RegistrationForm = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSendOtp = () => {
-    if (formData.mobile.length !== 10) {
-      setMessage({ type: 'error', text: 'Please enter a valid 10-digit mobile number' });
-      return;
-    }
-    setLoading(true);
-    // NOTE: OTP sending requires an SMS gateway integration (e.g. Twilio / MSG91).
-    // This demo marks the number as verified on the client side after acknowledgement.
-    setTimeout(() => {
-      setOtpSent(true);
-      setMessage({ type: 'info', text: 'OTP service not yet connected. Click "Verify" below to continue — your number will be confirmed at enrollment.' });
-      setLoading(false);
-    }, 800);
-  };
-
-  const handleVerifyOtp = () => {
-    setVerifyingOtp(true);
-    // Bypass: mark as verified since OTP gateway is not configured
-    setTimeout(() => {
-      setOtpVerified(true);
-      setOtpSent(false);
-      setMessage({ type: 'success', text: 'Mobile noted. Our team will verify it during enrollment.' });
-      setVerifyingOtp(false);
-    }, 600);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!otpVerified) {
-      setMessage({ type: 'error', text: 'Please verify your mobile number first' });
-      return;
-    }
-
     if (!agreed) {
       setMessage({ type: 'error', text: 'Please accept the declaration checkbox' });
       return;
@@ -108,22 +70,14 @@ const RegistrationForm = () => {
     setMessage(null);
 
     try {
-      const response = await fetch(`${API_BASE}/api/registration/register`, {
+      const result = await apiFetch('/api/registration/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setSubmittedData(result.data);
-        setMessage({ type: 'success', text: `Registration Successful! Your ID: ${result.data.studentId}` });
-      } else {
-        setMessage({ type: 'error', text: result.message });
-      }
+      setSubmittedData(result.data);
+      setMessage({ type: 'success', text: `Registration Successful! Your ID: ${result.data.studentId}` });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Something went wrong. Please try again.' });
+      setMessage({ type: 'error', text: error.message || 'Something went wrong. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -219,58 +173,7 @@ const RegistrationForm = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-12 md:mb-16">
               <InputField label="Student Name" placeholder="Enter Full Name" name="name" value={formData.name} onChange={handleChange} />
               
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-black text-indigo-950/60 uppercase tracking-widest">Mobile Number</label>
-                <div className="flex gap-3">
-                  <div className="relative flex-1">
-                    <input 
-                      disabled={otpVerified}
-                      type="tel" 
-                      value={formData.mobile}
-                      placeholder="+91 00000 00000"
-                      className={`w-full bg-gray-50 border-2 ${otpVerified ? 'border-green-100 bg-green-50/30' : 'border-gray-100'} rounded-xl md:rounded-2xl px-5 md:px-6 py-3.5 md:py-4 font-bold text-brand-dark focus:border-brand-red focus:bg-white outline-none transition-all duration-500 text-sm shadow-sm`}
-                      onChange={(e) => handleChange('mobile', e.target.value)}
-                    />
-                    {otpVerified && (
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-green-500 text-white p-1 rounded-full animate-topic-pop">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  {!otpVerified && !otpSent && (
-                    <button 
-                      onClick={handleSendOtp}
-                      disabled={formData.mobile.length !== 10 || loading}
-                      className="bg-brand-dark text-white px-6 rounded-xl md:rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red transition-all disabled:opacity-30"
-                    >
-                      {loading ? '...' : 'Get OTP'}
-                    </button>
-                  )}
-                </div>
-
-                {/* OTP INPUT FIELD */}
-                {otpSent && !otpVerified && (
-                  <div className="flex gap-3 mt-2 animate-topic-pop">
-                    <input 
-                      type="text" 
-                      value={otpValue}
-                      placeholder="Enter 4-digit OTP"
-                      maxLength={4}
-                      className="flex-1 bg-red-50/30 border-2 border-brand-red/20 rounded-xl px-5 py-3 font-bold text-brand-dark focus:border-brand-red outline-none transition-all text-sm"
-                      onChange={(e) => setOtpValue(e.target.value)}
-                    />
-                    <button 
-                      onClick={handleVerifyOtp}
-                      disabled={otpValue.length !== 4 || verifyingOtp}
-                      className="bg-brand-red text-white px-8 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-dark transition-all"
-                    >
-                      {verifyingOtp ? '...' : 'Verify'}
-                    </button>
-                  </div>
-                )}
-              </div>
+              <InputField label="Mobile Number" placeholder="+91 00000 00000" name="mobile" value={formData.mobile} onChange={handleChange} />
 
               <InputField label="Email Address" placeholder="alex@gmail.com" type="email" name="email" value={formData.email} onChange={handleChange} />
               <div className="grid grid-cols-2 gap-4">

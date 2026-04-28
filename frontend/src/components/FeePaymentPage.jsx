@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '../api';
 
 const useInView = (options = {}) => {
   const ref = useRef(null);
@@ -79,6 +80,9 @@ const FeePaymentPage = ({ navigateTo }) => {
     amount: '',
     transactionId: ''
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [confirmData, setConfirmData] = useState(null); // holds backend response on success
 
   const paymentMethods = [
     {
@@ -123,9 +127,91 @@ const FeePaymentPage = ({ navigateTo }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setPaymentStep('confirm');
+    setSubmitError('');
+    setSubmitting(true);
+
+    try {
+      // 1. If 'qr' or 'upi' (manual) is selected, use old manual flow
+      if (selectedMethod === 'qr' || selectedMethod === 'upi') {
+        const result = await apiFetch('/api/payments/submit', {
+          method: 'POST',
+          body: JSON.stringify({ ...formData, paymentMethod: selectedMethod }),
+        });
+        setConfirmData(result);
+        setPaymentStep('confirm');
+        return;
+      }
+
+      // 2. Razorpay Flow for 'card' or 'netbanking' (or if you want to use it for everything)
+      const res = await loadRazorpay();
+      if (!res) {
+        throw new Error('Razorpay SDK failed to load. Are you online?');
+      }
+
+      // Create Order
+      const { order } = await apiFetch('/api/payments/create-order', {
+        method: 'POST',
+        body: JSON.stringify({ amount: formData.amount }),
+      });
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'BK Science Academy',
+        description: 'Course Fee Payment',
+        order_id: order.id,
+        handler: async (response) => {
+          try {
+            setSubmitting(true);
+            const verifyRes = await apiFetch('/api/payments/verify', {
+              method: 'POST',
+              body: JSON.stringify({
+                ...response,
+                name: formData.name,
+                phone: formData.phone,
+                email: formData.email,
+                amount: formData.amount
+              }),
+            });
+            setConfirmData(verifyRes);
+            setPaymentStep('confirm');
+          } catch (err) {
+            setSubmitError('Payment verification failed: ' + err.message);
+          } finally {
+            setSubmitting(false);
+          }
+        },
+        prefill: {
+          name: formData.name,
+          email: formData.email,
+          contact: formData.phone,
+        },
+        theme: {
+          color: '#e11d48', // brand-red
+        },
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+
+    } catch (err) {
+      setSubmitError(err.message || 'Payment process failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -167,6 +253,28 @@ const FeePaymentPage = ({ navigateTo }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Payment Methods */}
               <div className="lg:col-span-2">
+                {paymentStep === 'confirm' && confirmData ? (
+                  <div className="bg-white rounded-3xl shadow-xl p-8 md:p-12 text-center">
+                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <h2 className="text-3xl font-black text-brand-dark mb-3">Payment Submitted!</h2>
+                    <p className="text-gray-500 font-medium mb-6">{confirmData.message}</p>
+                    <div className="bg-gray-50 rounded-2xl p-6 mb-6 text-left">
+                      <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Submission Reference</p>
+                      <p className="text-2xl font-black text-brand-red tracking-widest">#{confirmData.referenceId}</p>
+                      <p className="text-sm text-gray-500 mt-2">Keep this reference ID for follow-up. Verification within 24 hours.</p>
+                    </div>
+                    <button
+                      onClick={() => { setPaymentStep('select'); setConfirmData(null); setFormData({ name: '', phone: '', email: '', amount: '', transactionId: '' }); }}
+                      className="w-full py-4 bg-gray-100 text-brand-dark font-black uppercase tracking-widest rounded-xl hover:bg-gray-200 transition-colors"
+                    >
+                      Submit Another
+                    </button>
+                  </div>
+                ) : (
                 <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8">
                   <h2 className="text-2xl font-black text-brand-dark mb-6">Select Payment Method</h2>
                   
@@ -258,28 +366,36 @@ const FeePaymentPage = ({ navigateTo }) => {
                         </div>
                       )}
 
-                      <div>
-                        <label className="block text-sm font-bold text-gray-500 mb-2">Transaction ID / Ref No.</label>
-                        <input 
-                          type="text" 
-                          name="transactionId"
-                          value={formData.transactionId}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-red focus:ring-2 focus:ring-brand-red/20 outline-none transition"
-                          placeholder="Enter UPI transaction ID or bank ref number"
-                        />
-                      </div>
+                      {(selectedMethod === 'upi' || selectedMethod === 'qr') && (
+                        <div>
+                          <label className="block text-sm font-bold text-gray-500 mb-2">Transaction ID / Ref No.</label>
+                          <input 
+                            type="text" 
+                            name="transactionId"
+                            value={formData.transactionId}
+                            onChange={handleInputChange}
+                            required
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-red focus:ring-2 focus:ring-brand-red/20 outline-none transition"
+                            placeholder="Enter UPI transaction ID or bank ref number"
+                          />
+                        </div>
+                      )}
+
+                      {submitError && (
+                        <p className="text-sm font-bold text-brand-red">{submitError}</p>
+                      )}
 
                       <button 
                         type="submit"
-                        className="w-full py-4 bg-brand-red text-white font-black uppercase tracking-wider rounded-xl hover:bg-red-700 transition-all duration-300 shadow-lg shadow-brand-red/20"
+                        disabled={submitting}
+                        className="w-full py-4 bg-brand-red text-white font-black uppercase tracking-wider rounded-xl hover:bg-red-700 transition-all duration-300 shadow-lg shadow-brand-red/20 disabled:opacity-60"
                       >
-                        Submit Payment Details
+                        {submitting ? 'Processing...' : (selectedMethod === 'card' || selectedMethod === 'netbanking' ? 'Proceed to Checkout' : 'Submit Payment Details')}
                       </button>
                     </form>
                   </div>
                 </div>
+                )}
               </div>
 
               {/* Bank Details Sidebar */}

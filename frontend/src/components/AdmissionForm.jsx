@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, ArrowRight, User, GraduationCap, MapPin, Phone, Mail, Award, FileText, ChevronRight, Sparkles } from 'lucide-react';
-import { API_BASE } from '../api';
+import { apiFetch } from '../api';
 
 
 const InputField = ({ label, placeholder, type = "text", name, value, onChange, icon: Icon }) => (
@@ -72,13 +72,6 @@ const AdmissionForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // OTP States
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [otpValue, setOtpValue] = useState('');
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
-  const [otpError, setOtpError] = useState('');
-
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
@@ -94,35 +87,9 @@ const AdmissionForm = () => {
   };
 
   const nextStep = () => {
-    if (step === 1 && !otpVerified) {
-      setOtpError('Please verify your mobile number to continue');
-      return;
-    }
     setStep(s => s + 1);
   };
   const prevStep = () => setStep(s => s - 1);
-
-  const handleSendOtp = () => {
-    if (formData.mobile.length !== 10) return;
-    setVerifyingOtp(true);
-    // OTP gateway not configured — bypass after acknowledgement
-    setTimeout(() => {
-      setOtpSent(true);
-      setVerifyingOtp(false);
-    }, 800);
-  };
-
-  const handleVerifyOtp = () => {
-    if (otpValue.length < 1) return;
-    setVerifyingOtp(true);
-    // Bypass: SMS gateway not connected; verification happens offline
-    setTimeout(() => {
-      setOtpVerified(true);
-      setOtpSent(false);
-      setOtpError('');
-      setVerifyingOtp(false);
-    }, 600);
-  };
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -138,26 +105,16 @@ const AdmissionForm = () => {
 
     console.log('🚀 Attempting Admission Submission:', formData);
     setIsSubmitting(true);
-    
     try {
-      const response = await fetch(`${API_BASE}/api/admission/submit`, {
+      await apiFetch('/api/admission/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
-      
-      const result = await response.json();
-      console.log('📥 Backend Response:', result);
-      
-      if (result.success) {
-        setIsSuccess(true);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        setOtpError('Submission failed: ' + (result.message || 'Please check all required fields.'));
-      }
+      setIsSuccess(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error('❌ Admission Submit Error:', error);
-      setOtpError('Network error. Please try again.');
+      setOtpError('Submission failed: ' + (error.message || 'Please check all required fields.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -279,67 +236,7 @@ const AdmissionForm = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <InputField label="Full Name" placeholder="Ex: Rahul Sharma" name="fullName" value={formData.fullName} onChange={handleChange} icon={User} />
                   
-                  <div className="flex flex-col gap-2 group relative">
-                    <label className="text-[10px] font-black text-indigo-950/40 uppercase tracking-[0.2em] group-focus-within:text-brand-red transition-all duration-300 ml-1">
-                      Mobile Number
-                    </label>
-                    <div className="relative">
-                      <div className="relative overflow-hidden rounded-2xl">
-                        <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-indigo-950/20 group-focus-within:text-brand-red transition-all duration-300">
-                          <Phone size={18} strokeWidth={2.5} />
-                        </div>
-                        <input 
-                          disabled={otpVerified}
-                          type="tel" 
-                          value={formData.mobile}
-                          placeholder="+91 00000 00000"
-                          className={`w-full bg-gray-50/50 backdrop-blur-sm border-2 ${otpVerified ? 'border-green-100 bg-green-50/30' : 'border-gray-100/50'} rounded-2xl pl-12 pr-24 py-4 font-bold text-brand-dark focus:border-brand-red focus:bg-white transition-all duration-500 text-sm shadow-sm outline-none`}
-                          onChange={handleChange}
-                          name="mobile"
-                        />
-                        {/* Inline Verify/Status Button */}
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                          {otpVerified ? (
-                            <div className="bg-green-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 animate-topic-pop">
-                              <CheckCircle size={14} /> Verified
-                            </div>
-                          ) : !otpSent && (
-                            <button 
-                              type="button"
-                              disabled={formData.mobile.length !== 10 || verifyingOtp}
-                              onClick={handleSendOtp}
-                              className="px-4 py-2 bg-brand-dark text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-brand-red transition-all disabled:opacity-30"
-                            >
-                              {verifyingOtp ? '...' : 'Send OTP'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* MINIMAL OTP ENTRY ATTACHED TO FIELD */}
-                      {otpSent && !otpVerified && (
-                        <div className="mt-2 animate-fade-up relative">
-                           <input 
-                            type="text" 
-                            placeholder="4-Digit Code"
-                            maxLength={4}
-                            value={otpValue}
-                            className="w-full bg-white border-2 border-brand-red/30 rounded-2xl pl-6 pr-24 py-3 font-bold text-brand-dark focus:border-brand-red outline-none transition-all text-sm shadow-lg"
-                            onChange={(e) => setOtpValue(e.target.value)}
-                           />
-                          <button 
-                            type="button"
-                            disabled={otpValue.length !== 4 || verifyingOtp}
-                            onClick={handleVerifyOtp}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 bg-brand-red text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-brand-dark transition-all"
-                          >
-                            {verifyingOtp ? '...' : 'Confirm'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    {otpError && <p className="text-[10px] font-bold text-brand-red uppercase tracking-wider ml-1 mt-1">{otpError}</p>}
-                  </div>
+                  <InputField label="Mobile Number" placeholder="Ex: 91580 00000" name="mobile" value={formData.mobile} onChange={handleChange} icon={Phone} />
                 </div>
 
                 <InputField label="Personal Email" placeholder="rahul@example.com" type="email" name="email" value={formData.email} onChange={handleChange} icon={Mail} />
@@ -456,7 +353,6 @@ const AdmissionForm = () => {
                               onChange={() => setFormData(prev => ({ ...prev, declaration: !prev.declaration }))} 
                             />
                             <div 
-                              onClick={() => setFormData(prev => ({ ...prev, declaration: !prev.declaration }))}
                               className={`w-6 h-6 border-2 rounded-lg transition-all cursor-pointer flex items-center justify-center ${formData.declaration ? 'bg-brand-red border-brand-red' : 'border-gray-200 hover:border-brand-red'}`}
                             >
                                {formData.declaration && <CheckCircle size={14} className="text-white" />}

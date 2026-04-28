@@ -7,7 +7,7 @@ const Footer = ({ navigateTo }) => {
   const sections = {
     "ABOUT US": ["Why BK Science", "About Us", "Academics Team", "JEE/NEET E-Brochure", "Foundation E-Brochure", "Landing Page"],
 
-    "ABOUT EXAM": ["JEE Hub", "NEET Hub", "MHT-CET", "NDA", "11th & 12th State Board", "Answer Key & Solutions"],
+    "ABOUT EXAM": ["JEE Main Info", "JEE Advanced Info", "JEE Hub", "NEET Hub", "MHT-CET", "NDA"],
     "CONTACT US": ["Contact Us", "Enquiry", "Be A Partner", "Associate Consultant", "Feedback & Grevience", "Careers"],
     "USEFUL LINKS": ["Study Center", "Fee Payment", "BK Champions", "BK Science Blog", "Coaching Guidelines", "BK Science Plus Magazine"]
   };
@@ -34,6 +34,8 @@ const Footer = ({ navigateTo }) => {
                       else if (lower.includes('landing page')) navigateTo('landing');
                       else if (lower.includes('academics team')) navigateTo('academics-team');
                       else if (lower.includes('foundation e-brochure')) navigateTo('foundation-brochure');
+                      else if (lower.includes('jee main info')) navigateTo('jee-main');
+                      else if (lower.includes('jee advanced info')) navigateTo('jee-advanced');
                       else if (lower.includes('jee')) navigateTo('jee-hub');
                       else if (lower.includes('neet')) navigateTo('neet-hub');
                       else if (lower.includes('cet')) navigateTo('cet');

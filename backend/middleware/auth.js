@@ -17,4 +17,14 @@ const requireAuth = (req, res, next) => {
   }
 };
 
-module.exports = { requireAuth };
+const requireSuperAdmin = (req, res, next) => {
+  requireAuth(req, res, () => {
+    if (req.admin.role === 'super-admin') {
+      next();
+    } else {
+      return res.status(403).json({ success: false, message: 'Super-admin access required' });
+    }
+  });
+};
+
+module.exports = { requireAuth, requireSuperAdmin };

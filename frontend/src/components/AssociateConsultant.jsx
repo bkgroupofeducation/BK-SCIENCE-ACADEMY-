@@ -1,17 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '../api';
 
 const AssociateConsultant = ({ navigateTo }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [formStatus, setFormStatus] = useState('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+  const formRef = useRef(null);
 
   useEffect(() => {
     setIsVisible(true);
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMsg('');
     setFormStatus('submitting');
-    setTimeout(() => setFormStatus('success'), 1500);
+    const fd = new FormData(formRef.current);
+    try {
+      await apiFetch('/api/associate/apply', {
+        method: 'POST',
+        body: JSON.stringify({
+          fullName: fd.get('fullName'),
+          phone: fd.get('phone'),
+          email: fd.get('email'),
+          profession: fd.get('profession'),
+          description: fd.get('description'),
+        }),
+      });
+      setFormStatus('success');
+    } catch (err) {
+      setErrorMsg(err.message || 'Submission failed. Please try again.');
+      setFormStatus('idle');
+    }
   };
 
   const perks = [
@@ -81,24 +101,24 @@ const AssociateConsultant = ({ navigateTo }) => {
                       <h3 className="text-3xl font-black text-brand-dark uppercase tracking-tighter mb-8 leading-none">
                         Drop Your <span className="text-brand-red">Credentials</span>
                       </h3>
-                      <form onSubmit={handleSubmit} className="space-y-6">
+                      <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
                         <div className="grid md:grid-cols-2 gap-6">
                           <div className="space-y-2">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
-                            <input required type="text" className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-red outline-none font-bold text-sm" placeholder="e.g. John Doe" />
+                            <input required name="fullName" type="text" className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-red outline-none font-bold text-sm" placeholder="e.g. John Doe" />
                           </div>
                           <div className="space-y-2">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Contact Number</label>
-                            <input required type="tel" className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-red outline-none font-bold text-sm" placeholder="+91 XXX XXX XXXX" />
+                            <input required name="phone" type="tel" className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-red outline-none font-bold text-sm" placeholder="+91 XXX XXX XXXX" />
                           </div>
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Work Email</label>
-                          <input required type="email" className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-red outline-none font-bold text-sm" placeholder="consultant@domain.com" />
+                          <input required name="email" type="email" className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-red outline-none font-bold text-sm" placeholder="consultant@domain.com" />
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Current Profession</label>
-                          <select className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-red outline-none font-bold text-sm appearance-none">
+                          <select name="profession" className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-red outline-none font-bold text-sm appearance-none">
                             <option>Education Consultant</option>
                             <option>School Administrator</option>
                             <option>Coaching Professional</option>
@@ -108,8 +128,11 @@ const AssociateConsultant = ({ navigateTo }) => {
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Brief Description (Optional)</label>
-                          <textarea className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-red outline-none font-bold text-sm h-32 resize-none" placeholder="Tell us about your experience..."></textarea>
+                          <textarea name="description" className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-brand-red outline-none font-bold text-sm h-32 resize-none" placeholder="Tell us about your experience..."></textarea>
                         </div>
+                        {errorMsg && (
+                          <p className="text-sm font-bold text-brand-red">{errorMsg}</p>
+                        )}
                         <button 
                           disabled={formStatus === 'submitting'}
                           type="submit" 

@@ -41,6 +41,9 @@ import AdminPanel from './components/AdminPanel';
 import MetaTags from './components/MetaTags';
 import LandingPage from './components/LandingPage';
 import InformationPage from './components/InformationPage';
+import JEEMainInfoPage from './components/JEEMainInfoPage';
+import MHTCETInfoPage from './components/MHTCETInfoPage';
+import NEETUGInfoPage from './components/NEETUGInfoPage';
 
 const Home = ({ navigateTo }) => (
   <div className="animate-fade-up">
@@ -112,7 +115,10 @@ function App() {
       'neet-12th': '/neet/12th',
       'neet-pass': '/neet/pass',
       'landing': '/landing',
-      'jee-advanced': '/information/jee-advanced'
+      'jee-advanced': '/information/jee-advanced',
+      'jee-main': '/information/jee-main',
+      'mht-cet-info': '/information/mht-cet',
+      'neet-ug-info': '/information/neet-ug'
     };
     const path = pathMap[v] || '/';
     navigate(path);
@@ -146,7 +152,7 @@ function App() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="site-shell min-h-screen bg-white">
       <MetaTags />
       <div className="no-print">
         <Navbar navigateTo={navigateTo} currentView={location.pathname} />
@@ -189,6 +195,9 @@ function App() {
           <Route path="/state-board" element={<CourseHubPage courseType="boards" navigateTo={navigateTo} />} />
           <Route path="/landing" element={<LandingPage navigateTo={navigateTo} />} />
           <Route path="/information/jee-advanced" element={<InformationPage navigateTo={navigateTo} />} />
+          <Route path="/information/jee-main" element={<JEEMainInfoPage navigateTo={navigateTo} />} />
+          <Route path="/information/mht-cet" element={<MHTCETInfoPage navigateTo={navigateTo} />} />
+          <Route path="/information/neet-ug" element={<NEETUGInfoPage navigateTo={navigateTo} />} />
           <Route path="*" element={<Home />} />
 
         </Routes>

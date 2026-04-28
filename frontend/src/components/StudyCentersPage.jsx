@@ -139,7 +139,7 @@ const StudyCentersPage = ({ navigateTo }) => {
           <div className="animate-blob-1 absolute top-[-15%] left-[-10%] w-[55vw] h-[55vw] rounded-full bg-brand-red/10 blur-[140px]" />
           <div className="animate-blob-2 absolute bottom-[-15%] right-[-10%] w-[45vw] h-[45vw] rounded-full bg-indigo-600/8 blur-[160px]" />
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff06_1px,transparent_1px),linear-gradient(to_bottom,#ffffff06_1px,transparent_1px)] bg-[size:60px_60px]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-brand-dark via-transparent to-brand-dark" />
+          <div className="absolute inset-0 bg-gradient-to-b from-brand-dark 30% via-transparent to-brand-dark" />
         </div>
 
         <div className="container mx-auto px-6 relative z-10 flex flex-col lg:flex-row items-center gap-16 lg:gap-24 py-10">

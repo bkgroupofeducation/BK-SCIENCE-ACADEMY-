@@ -20,7 +20,12 @@ const RegistrationSchema = new mongoose.Schema({
   paymentStatus: { type: String, default: 'Pending' },
   paymentMethod: { type: String },
   transactionId: { type: String },
-  status: { type: String, default: 'Registered' }
+  status: { 
+    type: String, 
+    enum: ['Registered', 'Active', 'Inactive', 'Completed'],
+    default: 'Registered' 
+  },
+  remarks: { type: String, default: '' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Registration', RegistrationSchema);

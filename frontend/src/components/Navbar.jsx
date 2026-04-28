@@ -76,9 +76,9 @@ const Navbar = ({ navigateTo }) => {
         { label: "JEE-Advanced", icon: Book, action: () => navigateTo('jee-advanced') },
         { label: "JEE-Main", icon: Book, action: () => navigateTo('jee-main') },
         { label: "BITSAT", icon: Book, action: () => navigateTo('bitsat') },
-        { label: "MHT-CET", icon: Book, action: () => navigateTo('cet') },
+        { label: "MHT-CET", icon: Book, action: () => navigateTo('mht-cet-info') },
         { label: "MEDICAL", isHeading: true },
-        { label: "NEET-UG", icon: Book, action: () => navigateTo('neet-ug') }
+        { label: "NEET-UG", icon: Book, action: () => navigateTo('neet-ug-info') }
       ]
     },
     { 
@@ -137,20 +137,20 @@ const Navbar = ({ navigateTo }) => {
               <Menu size={20} />
             </button>
             <div className="cursor-pointer relative mix-blend-multiply group" onClick={handleLogoClick}>
-              <SafeImage src="/assets/Logo.png" alt="BK Science Academy" className="h-8 md:h-10 w-auto transform group-hover:scale-105 transition-all duration-500 origin-left relative z-10" fallbackText="Logo" />
+              <SafeImage src="/assets/Logo.png" alt="BK Science Academy" className="h-7 md:h-9 w-auto transform group-hover:scale-105 transition-all duration-500 origin-left relative z-10" fallbackText="Logo" />
             </div>
             
             <motion.div 
-              className="hidden xl:flex flex-col cursor-pointer bg-red-50/90 backdrop-blur-md border border-brand-red/10 px-3 py-1.5 rounded-full hover:bg-brand-red/10 transition-all duration-300 shadow-sm group/admit" 
+              className="hidden xl:flex flex-col cursor-pointer bg-red-50/90 backdrop-blur-md border border-brand-red/10 px-2.5 py-1 rounded-full hover:bg-brand-red/10 transition-all duration-300 shadow-sm group/admit" 
               onClick={() => navigateTo('home')}
               whileHover={{ scale: 1.05 }}
             >
-              <span className="text-[9px] font-black text-brand-red uppercase tracking-widest leading-none mb-1">Admission 2026</span>
-              <span className="text-[11px] font-black text-brand-dark uppercase tracking-tight leading-none flex items-center gap-1.5">
+              <span className="text-[8px] font-black text-brand-red uppercase tracking-widest leading-none mb-0.5">Admission 2026</span>
+              <span className="text-[10px] font-black text-brand-dark uppercase tracking-tight leading-none flex items-center gap-1">
                 Now Open
-                <span className="relative flex h-2 w-2">
+                <span className="relative flex h-1.5 w-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
                 </span>
               </span>
             </motion.div>
@@ -160,7 +160,7 @@ const Navbar = ({ navigateTo }) => {
             {menuItems.map((item) => (
               <div 
                 key={item.title} 
-                className="group/navitem relative flex items-center gap-1 cursor-pointer px-4 py-2 rounded-full text-[13px] font-bold text-gray-600 hover:text-brand-dark hover:bg-white hover:shadow-sm transition-all duration-300"
+                className="group/navitem relative flex items-center gap-0.5 cursor-pointer px-2.5 py-1.5 rounded-full text-[12px] font-bold text-gray-600 hover:text-brand-dark hover:bg-white hover:shadow-sm transition-all duration-300"
                 onMouseEnter={() => { if (item.type === "dropdown") setOpenDropdown(item.title); }}
                 onMouseLeave={() => { setOpenDropdown(null); setActiveSubMenu(null); }}
                 onClick={() => { if(item.action) item.action() }}
@@ -242,14 +242,14 @@ const Navbar = ({ navigateTo }) => {
           </div>
 
           <div className="flex items-center gap-2 md:gap-3 bg-gray-100/95 backdrop-blur-xl border border-gray-200/60 rounded-full p-1.5 shadow-lg pointer-events-auto">
-            <a href="tel:+918888301363" className="hidden lg:flex flex-col items-end group/phone px-4">
-              <span className="text-[10px] font-bold text-gray-500 transition-colors">Call Us</span>
-              <span className="text-[13px] font-black text-brand-dark flex items-center gap-1 group-hover/phone:text-brand-red transition-all">
+            <a href="tel:+918888301363" className="hidden xl:flex flex-col items-end group/phone px-2">
+              <span className="text-[9px] font-bold text-gray-500 transition-colors">Call Us</span>
+              <span className="text-[12px] font-black text-brand-dark flex items-center gap-1 group-hover/phone:text-brand-red transition-all">
                 +91 88883 01363
               </span>
             </a>
             <motion.button 
-              className="relative bg-[#2D68FF] text-white py-2.5 px-6 rounded-full font-bold text-[13px] transition-all overflow-hidden"
+              className="relative bg-[#2D68FF] text-white py-2 px-4 rounded-full font-bold text-[12px] transition-all overflow-hidden"
               onClick={() => navigateTo('registration')}
               whileHover={{ scale: 1.05, backgroundColor: '#1f56e0' }}
               whileTap={{ scale: 0.95 }}

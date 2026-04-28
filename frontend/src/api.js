@@ -10,8 +10,9 @@ export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
  */
 export async function apiFetch(path, options = {}) {
   const token = sessionStorage.getItem('bk_admin_token');
+  const isFormData = options.body instanceof FormData;
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };

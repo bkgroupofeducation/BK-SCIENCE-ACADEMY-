@@ -75,7 +75,7 @@ const Hero = ({ navigateTo }) => {
   };
 
   return (
-    <section className="relative min-h-screen bg-brand-dark overflow-hidden flex items-center pt-0 lg:pt-0">
+    <section className="relative min-h-screen bg-brand-dark overflow-hidden flex items-center pt-24 lg:pt-32">
 
       {/* --- REFINED BACKGROUND LAYER WITH PARALLAX --- */}
       <div className="absolute inset-0 z-0 select-none pointer-events-none">
@@ -161,23 +161,25 @@ const Hero = ({ navigateTo }) => {
               </button>
             </div>
 
-            {/* Updated Micro Stats */}
-            <div className="flex gap-8 pt-6 border-t border-white/5">
-               {[
-                 { label: 'Selections', value: '8500+', icon: Trophy },
-                 { label: 'Success Rate', value: '98%', icon: TrendingUp },
-                 { label: 'Expert Mentors', value: '150+', icon: Users }
-               ].map((s, i) => (
-                 <div key={i} className="flex items-center gap-3">
-                   <div className="w-10 h-10 rounded-lg bg-brand-red/10 flex items-center justify-center">
-                     <s.icon size={18} className="text-brand-red" />
+            {/* Targeted Visibility Overlay for Stats — Instruction 1, 3, 4, 5 */}
+            <div className="stats-visibility-overlay -mx-4 px-4 py-6 rounded-2xl">
+              <div className="flex gap-8">
+                 {[
+                   { label: 'Selections', value: '8500+', icon: Trophy },
+                   { label: 'Success Rate', value: '98%', icon: TrendingUp },
+                   { label: 'Expert Mentors', value: '150+', icon: Users }
+                 ].map((s, i) => (
+                   <div key={i} className="flex items-center gap-3">
+                     <div className="w-10 h-10 rounded-lg bg-brand-red/10 flex items-center justify-center">
+                       <s.icon size={18} className="text-brand-red" />
+                     </div>
+                     <div className="text-shadow-soft">
+                       <div className="text-xl font-black text-white">{s.value}</div>
+                       <div className="text-[9px] font-bold text-white/70 uppercase tracking-widest">{s.label}</div>
+                     </div>
                    </div>
-                   <div>
-                     <div className="text-xl font-black text-white">{s.value}</div>
-                     <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{s.label}</div>
-                   </div>
-                 </div>
-               ))}
+                 ))}
+              </div>
             </div>
           </div>
 
@@ -198,7 +200,7 @@ const Hero = ({ navigateTo }) => {
                         { name: 'Priya Patel', achievement: 'AIR 08 • AIIMS DELHI', stats: 'NEET • 715/720', img: '/assets/ranker2.png', tag: 'NEET SUPER', color: 'from-emerald-400 to-teal-500' },
                         { name: 'Sameer Khan', achievement: 'AIR 45 • NIT SURAT', stats: '99.99 PERCENTILE', img: '/assets/ranker3.png', tag: 'JEE MAIN', color: 'from-blue-500 to-indigo-600' },
                         { name: 'Ananya Iyer', achievement: 'AIR 112 • BITS PILANI', stats: 'JEE MAIN • 295/300', img: '/assets/ranker4.png', tag: 'JEE HUB', color: 'from-purple-500 to-pink-500' },
-                        { name: 'Rohan Mehta', achievement: 'AIR 88 • IIT KATHMANDU', stats: 'ADVANCED • 98.4%', img: '/assets/ranker1.png', tag: 'ELITE BATCH', color: 'from-amber-400 to-red-600' },
+                        { name: 'Rohan Patil', achievement: 'AIR 88 • IIT KATHMANDU', stats: 'ADVANCED • 98.4%', img: '/assets/ranker1.png', tag: 'ELITE BATCH', color: 'from-amber-400 to-red-600' },
                         { name: 'Sneha Deshmukh', achievement: 'AIR 21 • AFMC PUNE', stats: 'NEET • 705/720', img: '/assets/ranker2.png', tag: 'NEET CRACKERS', color: 'from-cyan-400 to-blue-600' }
                       ].map((student, i) => (
                         <div 
@@ -324,6 +326,7 @@ const Hero = ({ navigateTo }) => {
         </div>
       </div>
 
+      {/* Bottom gradient fade */}
       {/* Bottom gradient fade */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#ffffff] via-[#ffffff]/50 to-transparent pointer-events-none z-20"></div>
     </section>

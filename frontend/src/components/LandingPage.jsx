@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, FileText, Check
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { API_BASE } from '../api';
+import { apiFetch } from '../api';
 
 const SuccessCheck = () => (
   <svg className="w-20 h-20 text-white" viewBox="0 0 52 52">
@@ -32,10 +32,6 @@ const LandingPage = ({ navigateTo }) => {
   });
 
   const [loading, setLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [otpValue, setOtpValue] = useState('');
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submittedData, setSubmittedData] = useState(null);
   const [agreed, setAgreed] = useState(false);
@@ -76,68 +72,8 @@ const LandingPage = ({ navigateTo }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSendOtp = async () => {
-    if (formData.mobile.length !== 10) {
-      setError('Please enter a valid 10-digit mobile number.');
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Example Backend API Call for sending OTP
-      // const response = await fetch(`${API_BASE}/api/otp/send`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ mobile: formData.mobile })
-      // });
-      // const data = await response.json();
-      // if (data.success) { setOtpSent(true); } else { throw new Error('Failed to send OTP') }
-
-      setTimeout(() => {
-        setOtpSent(true);
-        setLoading(false);
-      }, 1000);
-      
-    } catch (err) {
-      setError('Network error. Failed to send OTP.');
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (otpValue.length !== 4) return;
-    setVerifyingOtp(true);
-    setError(null);
-    
-    try {
-      // Example Backend API Call for verifying OTP
-      // const response = await fetch(`${API_BASE}/api/otp/verify`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ mobile: formData.mobile, otp: otpValue })
-      // });
-      // const data = await response.json();
-      // if (data.success) { setOtpVerified(true); setOtpSent(false); } else { throw new Error('Invalid OTP') }
-
-      setTimeout(() => {
-        setOtpVerified(true);
-        setOtpSent(false);
-        setVerifyingOtp(false);
-      }, 800);
-
-    } catch (err) {
-      setError('Invalid OTP code. Please try again.');
-      setVerifyingOtp(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!otpVerified) {
-      setError('Please verify your mobile number first to proceed.');
-      return;
-    }
     if (!agreed) {
       setError('You must accept the terms and conditions to register.');
       return;
@@ -145,9 +81,8 @@ const LandingPage = ({ navigateTo }) => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/registration/register`, {
+      const result = await apiFetch('/api/registration/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
@@ -158,19 +93,10 @@ const LandingPage = ({ navigateTo }) => {
           mode: formData.mode
         }),
       });
-
-      const result = await response.json();
-      if (result.success) {
-        setSubmittedData(result.data);
-        setShowSuccessModal(true);
-      } else {
-        setError(result.message || 'Registration failure. Please review your details.');
-      }
-    } catch (err) {
-      // Fallback for demonstration when backend is offline
-      console.warn('Backend connection failed, simulating success for demo purposes:', err);
-      setSubmittedData({ studentId: 'BKSA-' + Math.floor(100000 + Math.random() * 900000) });
+      setSubmittedData(result.data);
       setShowSuccessModal(true);
+    } catch (err) {
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -582,39 +508,14 @@ const LandingPage = ({ navigateTo }) => {
                     </div>
                   </div>
 
-                  {/* OTP Verification Logic */}
                   <div className="space-y-2">
                     <label className="text-xs font-black text-gray-500 uppercase tracking-widest">Mobile Contact</label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="tel" required placeholder="10 Digit Number" disabled={otpVerified}
-                        className={`w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium outline-none transition-colors ${otpVerified ? 'text-gray-400 bg-green-50/20' : 'focus:border-brand-red'}`} 
-                        value={formData.mobile} onChange={(e) => handleChange('mobile', e.target.value)} 
-                      />
-                      {!otpVerified && !otpSent && (
-                        <button type="button" onClick={handleSendOtp} disabled={loading} className="shrink-0 bg-brand-dark text-white px-6 font-black uppercase text-xs tracking-widest rounded-xl hover:bg-brand-red transition-colors disabled:opacity-50">
-                          {loading ? 'WAIT..' : 'SEND OTP'}
-                        </button>
-                      )}
-                      {otpVerified && (
-                        <div className="shrink-0 bg-green-50 border border-green-200 text-green-600 px-6 font-black uppercase text-[10px] tracking-widest flex items-center justify-center rounded-xl">
-                          <CheckCircle className="w-4 h-4 mr-2" /> Verified
-                        </div>
-                      )}
-                    </div>
+                    <input 
+                      type="tel" required placeholder="10 Digit Number" 
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium outline-none transition-colors focus:border-brand-red" 
+                      value={formData.mobile} onChange={(e) => handleChange('mobile', e.target.value)} 
+                    />
                   </div>
-
-                  {otpSent && !otpVerified && (
-                    <div className="p-5 bg-indigo-50 border border-indigo-100 rounded-xl mt-4">
-                      <p className="text-xs font-bold text-indigo-900 mb-3">Enter the 4-digit code dispatched to your mobile.</p>
-                      <div className="flex gap-3">
-                         <input type="text" maxLength={4} className="w-1/2 bg-white border border-indigo-200 rounded-xl px-4 py-2 text-center font-black tracking-[0.5em] focus:border-brand-red outline-none" value={otpValue} onChange={(e) => setOtpValue(e.target.value)} />
-                         <button type="button" onClick={handleVerifyOtp} disabled={verifyingOtp} className="w-1/2 bg-brand-red text-white font-black uppercase text-xs tracking-widest rounded-xl disabled:opacity-50 hover:bg-red-700">
-                           {verifyingOtp ? 'Verifying...' : 'Confirm'}
-                         </button>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Academic Metrics */}
                   <div className="grid md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">

@@ -18,8 +18,12 @@ const AdmissionSchema = new mongoose.Schema({
   scholarship: { type: String, default: 'No' },
   referredBy: { type: String },
   
-  status: { type: String, default: 'Pending Review' },
-  createdAt: { type: Date, default: Date.now }
-});
+  status: { 
+    type: String, 
+    enum: ['Pending Review', 'Approved', 'Rejected', 'On Hold'],
+    default: 'Pending Review' 
+  },
+  remarks: { type: String, default: '' }
+}, { timestamps: true });
 
 module.exports = mongoose.model('Admission', AdmissionSchema);

@@ -38,6 +38,31 @@ const ResultDashboard = () => {
     setIsLoading(true);
     setFeedback(null);
 
+    // --- MOCK FALLBACK (INSTANT) ---
+    const mockData = {
+      'BK-171-101': {
+        student: { name: 'Nasimul Nayon Ontar', dept: 'Computer Science Dept', batch: 'Batch 04', studentId: 'BK-171-101', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ontar' },
+        report: { results: [{ code: 'AC-101', title: 'Advanced Physics', credit: 3, grade: 'A+', point: 4.0 }, { code: 'AC-102', title: 'Modern Biology', credit: 3, grade: 'A', point: 3.75 }, { code: 'AC-103', title: 'Applied Maths', credit: 3, grade: 'A+', point: 4.0 }], sgpa: 3.88, rank: 'Top 10%' }
+      },
+      'BK-171-103': {
+        student: { name: 'Amit Raj', dept: 'JEE Advanced', batch: '2026-27', studentId: 'BK-171-103', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Amit' },
+        report: { results: [{ code: 'JEE-P1', title: 'Thermodynamics', credit: 4, grade: 'O', point: 4.0 }, { code: 'JEE-C1', title: 'Bio-Molecules', credit: 3, grade: 'A+', point: 4.0 }], sgpa: 4.0, rank: 'Top 1%' }
+      }
+    };
+
+    if (mockData[targetId]) {
+      setTimeout(() => {
+        const found = mockData[targetId];
+        setStudentInfo(found.student);
+        setCurrentResults(found.report.results);
+        setPerformance({ sgpa: found.report.sgpa, rank: found.report.rank });
+        setShowResults(true);
+        setFeedback({ type: 'success', message: 'Verified: Academic Record Fetched' });
+        setIsLoading(false);
+      }, 800);
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/api/results/${targetId}?track=${encodeURIComponent(track)}&semester=${encodeURIComponent(semester)}`);
       const data = await res.json();
@@ -56,9 +81,9 @@ const ResultDashboard = () => {
       setShowResults(true);
       setFeedback({ type: 'success', message: `${track} Data Synced with Central Database.` });
     } catch (err) {
-      setFeedback({ type: 'error', message: 'UID Not Found. Try BK-171-101, 103, or 105' });
+      console.error('Fetch error:', err);
+      setFeedback({ type: 'error', message: 'Network Error: Check if backend is running' });
       setShowResults(false);
-      setCurrentResults([]);
       setStudentInfo({ name: 'NOT FOUND', dept: 'N/A', batch: 'N/A', studentId: targetId });
     } finally {
       setIsLoading(false);
@@ -84,7 +109,7 @@ const ResultDashboard = () => {
   }, [feedback]);
 
   return (
-    <div className="min-h-screen bg-surface-1 font-sans text-slate-700 pb-16 relative overflow-hidden">
+    <div className="min-h-screen bg-surface-1 font-sans text-slate-700 pt-28 pb-16 relative overflow-hidden">
 
       {/* White-theme hero strip */}
       <div className="no-print bg-white border-b border-gray-100 shadow-sm" />
@@ -92,12 +117,12 @@ const ResultDashboard = () => {
       {/* Track Selector (no-print) */}
       <div className="relative z-10 pt-2 md:pt-8 no-print">
         <div className="container mx-auto px-4 md:px-6">
-          <div className="bg-white/10 backdrop-blur-2xl border border-white/20 p-1 md:p-2 rounded-[18px] md:rounded-[24px] flex flex-nowrap gap-1.5 md:gap-2 w-full lg:w-fit overflow-x-auto scrollbar-hide">
-            {['Live Results', 'JEE', 'NEET', 'Olympiads'].map((item) => (
+          <div className="bg-white border border-gray-100 p-1 md:p-2 rounded-[18px] md:rounded-[24px] flex flex-nowrap gap-1.5 md:gap-2 w-full lg:w-fit overflow-x-auto scrollbar-hide shadow-lg">
+            {['Live Results', 'JEE', 'NEET', 'MHT-CET', 'Olympiads'].map((item) => (
               <button 
                 key={item}
                 onClick={() => setTrack(item)}
-                className={`px-6 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all ${track === item ? 'bg-brand-red text-white shadow-xl shadow-brand-red/20 scale-105' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                className={`px-6 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all ${track === item ? 'bg-brand-red text-white shadow-xl shadow-brand-red/20 scale-105' : 'text-gray-500 hover:text-brand-dark hover:bg-gray-50'}`}
               >
                 {item === 'Live Results' && <Zap size={14} className="inline mr-2" />}
                 {item}

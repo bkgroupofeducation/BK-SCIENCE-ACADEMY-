@@ -182,6 +182,7 @@ const Results = ({ navigateTo }) => {
   const tabs = [
     { id: 'jee', label: 'JEE', color: 'red' },
     { id: 'neet', label: 'NEET', color: 'green' },
+    { id: 'mht-cet', label: 'MHT-CET', color: 'blue' },
     { id: 'olympiads', label: 'Olympiads', color: 'purple' },
   ];
 
@@ -316,6 +317,43 @@ const Results = ({ navigateTo }) => {
     },
   };
 
+  const mhtcetData = {
+    '2026': {
+      main: {
+        title: 'MHT-CET',
+        year: '2026',
+        color: 'blue',
+        stats: [
+          { value: '55', suffix: '%', label: 'Selection' },
+          { value: '200', suffix: '+', label: 'Qualified' },
+          { value: '99.98', suffix: '%ile', label: 'Top Score' },
+        ],
+        rankers: [
+          { name: 'Sameer', rank: '99.98%ile', color: 'from-blue-100 to-blue-200' },
+          { name: 'Anjali', rank: '99.95%ile', color: 'from-indigo-100 to-indigo-200' },
+          { name: 'Omkar', rank: '99.92%ile', color: 'from-blue-100 to-blue-200' },
+          { name: 'Tanvi', rank: '99.88%ile', color: 'from-indigo-100 to-indigo-200' },
+        ],
+      },
+      state: {
+        title: 'District Rankers',
+        year: '2026',
+        color: 'blue',
+        stats: [
+          { value: '15', suffix: '+', label: 'Dist. Toppers' },
+          { value: '1', suffix: '', label: 'Nashik Rank' },
+          { value: '100', suffix: '%', label: 'Pass Ratio' },
+        ],
+        rankers: [
+          { name: '#1', rank: 'Nashik', color: 'from-blue-100 to-blue-200' },
+          { name: '#1', rank: 'Sinnar', color: 'from-indigo-100 to-indigo-200' },
+          { name: '#1', rank: 'Yeola', color: 'from-blue-100 to-blue-200' },
+          { name: '#2', rank: 'Nashik', color: 'from-indigo-100 to-indigo-200' },
+        ],
+      },
+    },
+  };
+
   const olympiadData = [
     { title: 'PRMO / RMO', color: 'purple', stats: [
       { value: '2,500', suffix: '+', label: 'Qualified' },
@@ -334,7 +372,7 @@ const Results = ({ navigateTo }) => {
     ]},
   ];
 
-  const currentData = activeTab === 'jee' ? jeeData[activeYear] : activeTab === 'neet' ? neetData[activeYear] : null;
+  const currentData = activeTab === 'jee' ? jeeData[activeYear] : activeTab === 'neet' ? neetData[activeYear] : activeTab === 'mht-cet' ? mhtcetData[activeYear] : null;
 
   return (
     <section className="pt-16 md:pt-20 pb-20 bg-gradient-to-b from-gray-50 to-white overflow-hidden relative">
@@ -458,6 +496,24 @@ const Results = ({ navigateTo }) => {
 
         {/* NEET Content */}
         {activeTab === 'neet' && currentData && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+            <ResultCard 
+              {...currentData.main}
+              stats={currentData.main.stats}
+              rankers={currentData.main.rankers}
+              delay={100}
+            />
+            <ResultCard 
+              {...currentData.state}
+              stats={currentData.state.stats}
+              rankers={currentData.state.rankers}
+              delay={200}
+            />
+          </div>
+        )}
+
+        {/* MHT-CET Content */}
+        {activeTab === 'mht-cet' && currentData && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
             <ResultCard 
               {...currentData.main}

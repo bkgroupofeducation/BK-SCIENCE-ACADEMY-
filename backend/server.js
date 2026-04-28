@@ -28,7 +28,15 @@ app.use('/api/counseling',   require('./routes/counseling'));
 app.use('/api/registration', require('./routes/registration'));
 app.use('/api/admission',    require('./routes/admission'));
 app.use('/api/enquiry',      require('./routes/enquiry'));
-app.use('/api/admin',        require('./routes/admin'));       // ← JWT-protected
+app.use('/api/admin',        require('./routes/admin'));
+app.use('/api/admin/pdfs',   require('./routes/pdfs'));
+app.use('/api/otp',          require('./routes/otp'));
+app.use('/api/associate',    require('./routes/associate'));
+app.use('/api/grievance',    require('./routes/grievance'));
+app.use('/api/payments',     require('./routes/payments'));
+
+// Serve static uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ────────── Health Check ──────────
 app.get('/', (req, res) => res.json({ message: 'BK Science Academy API is Running.', version: '2.0' }));
