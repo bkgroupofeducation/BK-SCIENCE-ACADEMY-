@@ -266,6 +266,7 @@ const Hero = ({ navigateTo }) => {
                             className="w-full h-full scale-[1.3] origin-center pointer-events-none"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                             allowFullScreen
+                            sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
                           ></iframe>
                           {/* Interaction Mask to hide YouTube controls */}
                           <div className="absolute inset-0 z-10 bg-transparent" />
