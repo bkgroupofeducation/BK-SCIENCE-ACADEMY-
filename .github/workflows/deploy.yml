@@ -14,12 +14,39 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Deploy to VPS
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies & Build
+        run: |
+          cd frontend
+          npm install --legacy-peer-deps
+          npm run build
+
+      - name: Compress Frontend dist
+        run: |
+          cd frontend
+          tar -czf dist.tar.gz dist
+
+      - name: Copy pre-built frontend archive to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "frontend/dist.tar.gz"
+          target: "/var/www/bkcarreracademy/"
+
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
-          # Restored key-based login using the working passphrase-less local key (bk-academy-deploy)
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
@@ -35,12 +62,13 @@ jobs:
             git fetch --all
             git reset --hard origin/main || { echo "❌ Git pull failed!"; exit 1; }
 
-            echo "📦 Installing Frontend Dependencies..."
-            cd "$APP_PATH/frontend" || { echo "❌ Frontend folder not found!"; exit 1; }
-            npm install --legacy-peer-deps || { echo "❌ Frontend npm install failed!"; exit 1; }
-
-            echo "🛠️ Building Vite Bundle..."
-            npm run build || { echo "❌ Frontend build failed!"; exit 1; }
+            echo "📦 Extracting Pre-built Frontend Archive..."
+            # Move the transferred archive from root target folder to frontend directory and extract
+            mv /var/www/bkcarreracademy/frontend/dist.tar.gz "$APP_PATH/frontend/dist.tar.gz"
+            cd "$APP_PATH/frontend"
+            rm -rf dist
+            tar -xzf dist.tar.gz
+            rm -f dist.tar.gz
 
             echo "⚙️ Installing Backend Dependencies..."
             cd "$APP_PATH/backend" || { echo "❌ Backend folder not found!"; exit 1; }
