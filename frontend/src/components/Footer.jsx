@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SafeImage from './SafeImage';
 
 // Custom Social Icons since Lucide version might missing brand icons
@@ -21,6 +21,7 @@ const YoutubeIcon = ({ size = 20 }) => (
 const Footer = ({ navigateTo, onOpenChat, isChatOpen }) => {
   const [showInitialPopup, setShowInitialPopup] = useState(false);
   const [scrollRotation, setScrollRotation] = useState(0);
+  const [visitorCount, setVisitorCount] = useState(null);
 
   const sections = {
     "ABOUT US": ["About Us", "Academics Team", "Study Center"],
@@ -29,7 +30,7 @@ const Footer = ({ navigateTo, onOpenChat, isChatOpen }) => {
     "CONTACT US": ["Contact Us", "Enquiry", "Feedback & Grevience", "JEE/NEET E-Brochure"]
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleScroll = () => {
       setScrollRotation(window.scrollY / 5);
     };
@@ -38,6 +39,20 @@ const Footer = ({ navigateTo, onOpenChat, isChatOpen }) => {
     const timer = setTimeout(() => {
       setShowInitialPopup(true);
     }, 5000);
+
+    // Visitor counter - increment once per session
+    const hasVisited = sessionStorage.getItem('bk_visited');
+    if (!hasVisited) {
+      fetch('/api/visitors/increment', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => { if (data.success) { setVisitorCount(data.count); sessionStorage.setItem('bk_visited', '1'); } })
+        .catch(() => {});
+    } else {
+      fetch('/api/visitors')
+        .then(res => res.json())
+        .then(data => { if (data.success) setVisitorCount(data.count); })
+        .catch(() => {});
+    }
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -175,8 +190,8 @@ const Footer = ({ navigateTo, onOpenChat, isChatOpen }) => {
         </div>
       </div>
       
-      <div className="pt-10 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="flex flex-col md:flex-row items-center gap-8">
+      <div className="pt-10 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="flex items-center gap-5">
               <div 
                 className="cursor-pointer active:scale-95 transition-all" 
@@ -188,6 +203,28 @@ const Footer = ({ navigateTo, onOpenChat, isChatOpen }) => {
               <div className="h-8 w-[1px] bg-gray-200"></div>
               <p className="text-sm font-black text-gray-400">© 2009 BK SCIENCE ACADEMY.</p>
             </div>
+
+            {/* Visitor Counter */}
+            <div className="flex items-center gap-2.5 px-4 py-2 bg-white/10 rounded-lg border border-white/15">
+              <div className="relative">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-brand-red">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+              </div>
+              <span className="text-xs font-black text-white tracking-wide">{visitorCount !== null ? visitorCount.toLocaleString() : '...'}</span>
+              <span className="text-[8px] font-black uppercase text-gray-500 tracking-widest">Visitors</span>
+            </div>
+
+            {/* Phone Number */}
+            <a 
+              href="tel:+918888301363" 
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg border border-white/15 hover:bg-brand-red/20 hover:border-brand-red/30 transition-all group"
+            >
+              <span className="text-sm group-hover:scale-110 transition-transform">📞</span>
+              <span className="text-xs font-black text-white tracking-wide">+91 88883 01363</span>
+            </a>
           </div>
           
           <div className="flex flex-wrap gap-x-6 gap-y-3 justify-center text-xs font-black text-gray-300 tracking-[0.12em]">

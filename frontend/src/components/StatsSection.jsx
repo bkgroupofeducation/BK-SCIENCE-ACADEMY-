@@ -21,7 +21,7 @@ const StatsSection = () => {
             Our Impact
           </div>
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-black text-white tracking-tighter leading-[1] mb-4 uppercase">
-            Excellence Since <span className="text-brand-red">2007</span>
+            Excellence Since <span className="text-brand-red">2009</span>
           </h2>
           <div className="w-16 h-0.5 bg-gradient-to-r from-brand-red via-brand-yellow to-brand-red rounded-full"></div>
         </div>

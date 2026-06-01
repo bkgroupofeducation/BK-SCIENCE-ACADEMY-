@@ -9,7 +9,7 @@ const center = {
   courses: ['JEE', 'NEET', 'Foundation'],
   featured: true,
   students: '2,500+',
-  established: '2007',
+  established: '2009',
   icon: '🏛️',
 };
 
@@ -203,7 +203,7 @@ const CentersPage = ({ navigateTo }) => {
         <div className="container mx-auto px-5 md:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4 max-w-4xl mx-auto">
             <AnimatedStat value="2,500+" label="Students" icon="🎓" delay={0} />
-            <AnimatedStat value="19+" label="Years" icon="🏛️" delay={100} />
+            <AnimatedStat value="17+" label="Years" icon="🏛️" delay={100} />
             <AnimatedStat value="JEE" label="Preparation" icon="📚" delay={200} />
             <AnimatedStat value="NEET" label="Preparation" icon="🩺" delay={300} />
           </div>

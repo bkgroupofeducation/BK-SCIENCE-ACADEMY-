@@ -68,6 +68,7 @@ const AdminPanel = ({ navigateTo }) => {
   const [isAuth,       setIsAuth]       = useState(() => isSessionValid());
   const [currentUser,  setCurrentUser]  = useState(() => getSessionUser());
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [visitorCount, setVisitorCount] = useState(null);
   
   const [username,     setUsername]     = useState('');
   const [password,     setPassword]     = useState('');
@@ -301,6 +302,16 @@ const AdminPanel = ({ navigateTo }) => {
       return () => clearInterval(interval);
     }
   }, [fetchData, isAuth]);
+
+  // Fetch visitor count for dashboard
+  useEffect(() => {
+    if (isAuth) {
+      fetch('/api/visitors')
+        .then(r => r.json())
+        .then(d => { if (d.success) setVisitorCount(d.count); })
+        .catch(() => {});
+    }
+  }, [isAuth]);
 
   /* ── Handlers ── */
   const handleLogin = async (e) => {
@@ -731,6 +742,13 @@ const AdminPanel = ({ navigateTo }) => {
                   label="Support Tickets" 
                   color="bg-purple-50 text-purple-600" 
                   onClick={() => { setActiveTab('tickets'); setPage(1); setSearch(''); }}
+                />
+                <StatCard 
+                  icon={Eye} 
+                  value={visitorCount !== null ? visitorCount.toLocaleString() : '...'} 
+                  label="Website Visitors" 
+                  color="bg-emerald-50 text-emerald-600" 
+                  badge="Live"
                 />
               </div>
 

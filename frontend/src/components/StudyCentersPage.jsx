@@ -10,7 +10,7 @@ const centerData = [
     phone: '+91 88883 01363',
     featured: true,
     students: '5,000+',
-    established: '2007',
+    established: '2009',
     facilities: ['Smart Classrooms', 'Advanced Labs', '24/7 Library', 'Doubt Cafe'],
     coordinates: { x: 50, y: 50 }
   }
