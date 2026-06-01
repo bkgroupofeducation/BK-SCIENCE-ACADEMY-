@@ -255,11 +255,13 @@ const Hero = ({ navigateTo }) => {
                   className="absolute inset-0"
                 >
                   <div className="absolute inset-0 transition-transform duration-1000 group-hover/featured:scale-105">
-                    {toppers[activeTestimonial].video ? (
+                    {(() => {
+                      const embedUrl = getYoutubeEmbedUrl(toppers[activeTestimonial].video);
+                      return embedUrl ? (
                         <div className="w-full h-full relative">
                           <iframe
                             ref={iframeRef}
-                            src={`${getYoutubeEmbedUrl(toppers[activeTestimonial].video)}&controls=0&showinfo=0`}
+                            src={`${embedUrl}&controls=0&showinfo=0`}
                             title="Success Story"
                             className="w-full h-full scale-[1.3] origin-center pointer-events-none"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -268,11 +270,12 @@ const Hero = ({ navigateTo }) => {
                           {/* Interaction Mask to hide YouTube controls */}
                           <div className="absolute inset-0 z-10 bg-transparent" />
                         </div>
-                    ) : (
-                      <div className="w-full h-full relative">
-                        <img src={toppers[activeTestimonial].image} alt="Topper" className="w-full h-full object-cover object-top brightness-[0.8] transition-all" />
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full h-full relative">
+                          <img src={toppers[activeTestimonial].image} alt="Topper" className="w-full h-full object-cover object-top brightness-[0.8] transition-all" />
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Shimmer Effect */}
