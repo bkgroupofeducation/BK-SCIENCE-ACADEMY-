@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Sitemap Location
+Sitemap: https://bkscience.in/sitemap.xml
+
+# Disallow admin areas
+Disallow: /adminportal
+Disallow: /api/

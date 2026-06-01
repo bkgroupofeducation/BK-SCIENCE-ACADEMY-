@@ -1,0 +1,15 @@
+{
+  "ignore": [
+    "uploads/*",
+    "node_modules/*",
+    ".git/*"
+  ],
+  "watch": [
+    "server.js",
+    "routes/",
+    "models/",
+    "middleware/",
+    ".env"
+  ],
+  "ext": "js,json,env"
+}

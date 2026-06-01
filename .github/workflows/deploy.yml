@@ -1,0 +1,60 @@
+name: Continuous Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            echo "=== Starting Automated VPS Deployment ==="
+            
+            # Navigate to project directory or exit if not found
+            cd /var/www/bkcarreracademy || { echo "❌ Directory /var/www/bkcarreracademy not found!"; exit 1; }
+
+            echo "📥 Fetching and resetting repository to origin/main..."
+            git fetch --all
+            git reset --hard origin/main || { echo "❌ Git pull failed!"; exit 1; }
+
+            echo "📦 Installing Frontend Dependencies..."
+            cd frontend || { echo "❌ Frontend folder not found!"; exit 1; }
+            npm install --legacy-peer-deps || { echo "❌ Frontend npm install failed!"; exit 1; }
+            
+            echo "🛠️ Building Vite Bundle..."
+            npm run build || { echo "❌ Frontend build failed!"; exit 1; }
+
+            echo "⚙️ Installing Backend Dependencies..."
+            cd ../backend || { echo "❌ Backend folder not found!"; exit 1; }
+            npm install --legacy-peer-deps || { echo "❌ Backend npm install failed!"; exit 1; }
+
+            echo "🚀 Managing PM2 Process..."
+            # Check if PM2 backend process exists
+            if pm2 describe backend > /dev/null 2>&1; then
+              echo "🔄 PM2 process 'backend' found, restarting safely..."
+              pm2 restart backend --update-env || { echo "❌ PM2 restart failed!"; exit 1; }
+            else
+              echo "🚀 PM2 process 'backend' not found, starting fresh..."
+              pm2 start server.js --name "backend" --update-env || { echo "❌ PM2 start failed!"; exit 1; }
+            fi
+            
+            # Save the PM2 process list to resurrect on server reboot
+            pm2 save --force
+
+            echo "🌐 Restarting Nginx Web Server..."
+            sudo systemctl restart nginx || { echo "❌ Nginx restart failed!"; exit 1; }
+
+            echo "✅ Deployment Completed Successfully!"

@@ -1,0 +1,16 @@
+.env
+.env.*
+*.log
+.vite/
+dist/
+build/
+node_modules/
+
+# Media and Large Files
+*.mp4
+*.mp3
+*.mov
+*.avi
+*.pdf
+public/assets/videos/
+public/assets/large-images/
