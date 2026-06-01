@@ -18,9 +18,8 @@ jobs:
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
-          # The pipe symbol (|) forces GitHub to preserve the multiline structure and trailing newline perfectly
-          key: |
-            ${{ secrets.VPS_SSH_KEY }}
+          # REMOVED the pipe symbol (|) and indentation to pass the private key cleanly without broken spacing padding
+          key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             echo "=== Starting Automated VPS Deployment ==="
