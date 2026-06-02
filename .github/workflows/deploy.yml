@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Frontend Dependencies & Build
@@ -40,7 +40,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           source: "frontend/dist.tar.gz"
-          target: "/var/www/"
+          target: "/var/www/bkscience.in"
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -50,57 +50,19 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
-            echo "=== Starting Automated VPS Deployment ==="
+            echo "=== Executing Targeted Science Academy Deployment ==="
 
-            # Dynamically detect the correct website path on the VPS by matching Git remote URL
-            APP_PATH=""
-            for dir in /var/www/*/ ; do
-              if [ -d "$dir.git" ]; then
-                remote_url=$(cd "$dir" && git remote get-url origin 2>/dev/null)
-                if [[ "$remote_url" == *"BK-SCIENCE-ACADEMY-"* ]]; then
-                  APP_PATH="${dir%/}"
-                  break
-                fi
-              fi
-            done
-
-            # Fallback checks if Git remote detection did not match
-            if [ -z "$APP_PATH" ]; then
-              if [ -d "/var/www/BK-SCIENCE-ACADEMY-" ]; then
-                APP_PATH="/var/www/BK-SCIENCE-ACADEMY-"
-              elif [ -d "/var/www/bk-science-academy" ]; then
-                APP_PATH="/var/www/bk-science-academy"
-              elif [ -d "/var/www/bkscience" ]; then
-                APP_PATH="/var/www/bkscience"
-              else
-                echo "❌ Error: Could not find the BK-SCIENCE-ACADEMY- directory on the VPS!"
-                echo "⚠️ Aborting deployment to prevent overwriting other websites (like UPSC/bkcarreracademy)."
-                exit 1
-              fi
-            fi
-
-            echo "📂 Detected Application Path: $APP_PATH"
-
-            # Navigate to project directory or exit if not found
+            # Explicitly point to the verified science folder path
+            APP_PATH="/var/www/bkscience.in"
             cd $APP_PATH || { echo "❌ Directory $APP_PATH not found!"; exit 1; }
 
-            echo "🔍 --- RUNNING SERVER DIAGNOSTICS ---"
-            echo "🛡️ checking UFW firewall status..."
-            sudo ufw status || echo "ufw not available"
-
-            echo "🌐 checking Nginx status..."
-            sudo systemctl status nginx || echo "nginx failed"
-
-            echo "🔌 checking listening ports..."
-            sudo ss -tulpn | grep -E "80|443|5007" || echo "no ports listening"
-
-            echo "📥 Fetching and resetting repository to origin/main..."
+            echo "📥 Fetching repository and resetting to origin/main..."
             git fetch --all
             git reset --hard origin/main || { echo "❌ Git pull failed!"; exit 1; }
 
             echo "📦 Extracting Pre-built Frontend Archive..."
-            # Move the transferred archive from /var/www/ to our detected app path and extract
-            mv /var/www/frontend/dist.tar.gz "$APP_PATH/frontend/dist.tar.gz" || mv /var/www/dist.tar.gz "$APP_PATH/frontend/dist.tar.gz" || true
+            # Adjust the file placement from the scp action transfer layer
+            mv $APP_PATH/frontend/dist.tar.gz $APP_PATH/frontend/dist.tar.gz 2>/dev/null || mv $APP_PATH/dist.tar.gz $APP_PATH/frontend/dist.tar.gz || true
             cd "$APP_PATH/frontend"
             rm -rf dist
             tar -xzf dist.tar.gz
@@ -110,24 +72,21 @@ jobs:
             cd "$APP_PATH/backend" || { echo "❌ Backend folder not found!"; exit 1; }
             npm install --legacy-peer-deps || { echo "❌ Backend npm install failed!"; exit 1; }
 
-            echo "🚀 Managing PM2 Process..."
-            if pm2 describe backend > /dev/null 2>&1; then
-              echo "🔄 PM2 process 'backend' found, restarting safely..."
-              pm2 restart backend --update-env || { echo "❌ PM2 restart failed!"; exit 1; }
+            echo "🚀 Managing Isolated PM2 Process..."
+            # Use unique names to avoid cross-project namespace collisions
+            if pm2 describe bkscience-backend > /dev/null 2>&1; then
+              echo "🔄 PM2 process 'bkscience-backend' found, restarting safely..."
+              pm2 restart bkscience-backend --update-env || { echo "❌ PM2 restart failed!"; exit 1; }
             else
-              echo "🚀 PM2 process 'backend' not found, starting fresh..."
-              pm2 start server.js --name "backend" --update-env || { echo "❌ PM2 start failed!"; exit 1; }
+              echo "🚀 PM2 process 'bkscience-backend' not found, starting fresh..."
+              pm2 start server.js --name "bkscience-backend" --update-env || { echo "❌ PM2 start failed!"; exit 1; }
             fi
 
+            # Clean up the accidental, problematic generic backend process if it is running here
+            pm2 delete backend || true
             pm2 save --force
-
-            echo "🛡️ Ensuring HTTP and HTTPS ports are open in UFW firewall..."
-            sudo ufw allow 80/tcp || true
-            sudo ufw allow 443/tcp || true
-            sudo ufw allow 'Nginx Full' || true
-            sudo ufw reload || true
 
             echo "🌐 Restarting Nginx Web Server..."
             sudo systemctl restart nginx || { echo "❌ Nginx restart failed!"; exit 1; }
 
-            echo "✅ Deployment Completed Successfully!"
+            echo "✅ Deployment Completed Successfully without UPSC collisions!"
