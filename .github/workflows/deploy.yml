@@ -52,21 +52,31 @@ jobs:
           script: |
             echo "=== Starting Automated VPS Deployment ==="
 
-            echo "📁 --- DIAGNOSTIC: LIST OF DIRECTORIES IN /var/www ---"
-            ls -la /var/www || true
+            # Dynamically detect the correct website path on the VPS by matching Git remote URL
+            APP_PATH=""
+            for dir in /var/www/*/ ; do
+              if [ -d "$dir.git" ]; then
+                remote_url=$(cd "$dir" && git remote get-url origin 2>/dev/null)
+                if [[ "$remote_url" == *"BK-SCIENCE-ACADEMY-"* ]]; then
+                  APP_PATH="${dir%/}"
+                  break
+                fi
+              fi
+            done
 
-            echo "🌐 --- DIAGNOSTIC: NGINX CONFIGURATION PATHS ---"
-            sudo grep -R "root " /etc/nginx/sites-enabled/ || true
-
-            # Dynamically detect the correct website path on the VPS
-            if [ -d "/var/www/BK-SCIENCE-ACADEMY-" ]; then
-              APP_PATH="/var/www/BK-SCIENCE-ACADEMY-"
-            elif [ -d "/var/www/bk-science-academy" ]; then
-              APP_PATH="/var/www/bk-science-academy"
-            elif [ -d "/var/www/bkscience" ]; then
-              APP_PATH="/var/www/bkscience"
-            else
-              APP_PATH="/var/www/bkcarreracademy"
+            # Fallback checks if Git remote detection did not match
+            if [ -z "$APP_PATH" ]; then
+              if [ -d "/var/www/BK-SCIENCE-ACADEMY-" ]; then
+                APP_PATH="/var/www/BK-SCIENCE-ACADEMY-"
+              elif [ -d "/var/www/bk-science-academy" ]; then
+                APP_PATH="/var/www/bk-science-academy"
+              elif [ -d "/var/www/bkscience" ]; then
+                APP_PATH="/var/www/bkscience"
+              else
+                echo "❌ Error: Could not find the BK-SCIENCE-ACADEMY- directory on the VPS!"
+                echo "⚠️ Aborting deployment to prevent overwriting other websites (like UPSC/bkcarreracademy)."
+                exit 1
+              fi
             fi
 
             echo "📂 Detected Application Path: $APP_PATH"
