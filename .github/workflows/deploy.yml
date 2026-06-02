@@ -52,6 +52,12 @@ jobs:
           script: |
             echo "=== Starting Automated VPS Deployment ==="
 
+            echo "📁 --- DIAGNOSTIC: LIST OF DIRECTORIES IN /var/www ---"
+            ls -la /var/www || true
+
+            echo "🌐 --- DIAGNOSTIC: NGINX CONFIGURATION PATHS ---"
+            sudo grep -R "root " /etc/nginx/sites-enabled/ || true
+
             # Dynamically detect the correct website path on the VPS
             if [ -d "/var/www/BK-SCIENCE-ACADEMY-" ]; then
               APP_PATH="/var/www/BK-SCIENCE-ACADEMY-"
