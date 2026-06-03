@@ -75,6 +75,7 @@ app.use('/api/support',      require('./routes/support'));
 app.use('/api/toppers',      require('./routes/toppers'));
 app.use('/api/popups',       require('./routes/popups'));
 app.use('/api/visitors',     require('./routes/visitors'));
+app.use('/api/timers',       require('./routes/timers'));
 
 // Health Check Endpoint (crucial for PM2/Nginx monitoring)
 app.get('/api/health', (req, res) => res.status(200).json({ 

@@ -36,6 +36,8 @@ const CountdownTimer = ({ targetDate }) => {
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
         setCountdown({ days, hours, minutes, seconds });
+      } else {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
       }
     };
 
@@ -45,16 +47,16 @@ const CountdownTimer = ({ targetDate }) => {
   }, [targetDate]);
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 sm:gap-4">
       {[
-        { value: countdown.days, label: 'Days' },
-        { value: countdown.hours, label: 'Hours' },
-        { value: countdown.minutes, label: 'Mins' },
-        { value: countdown.seconds, label: 'Secs' }
+        { value: countdown.days, label: 'DAYS' },
+        { value: countdown.hours, label: 'HOURS' },
+        { value: countdown.minutes, label: 'MINS' },
+        { value: countdown.seconds, label: 'SECS' }
       ].map((item, i) => (
-        <div key={i} className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-xl px-3 py-2 min-w-[55px] text-center">
-          <div className="text-xl font-black text-white">{String(item.value).padStart(2, '0')}</div>
-          <div className="text-[8px] text-white/50 uppercase tracking-wider">{item.label}</div>
+        <div key={i} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-white/20 bg-white/5 flex flex-col items-center justify-center backdrop-blur-md transition-all duration-300 hover:border-brand-red/50 hover:bg-white/10 shadow-lg">
+          <div className="text-xl sm:text-2xl font-black text-white leading-none">{String(item.value).padStart(2, '0')}</div>
+          <div className="text-[7px] sm:text-[9px] text-white/50 uppercase tracking-widest mt-1 sm:mt-1.5 font-black">{item.label}</div>
         </div>
       ))}
     </div>
@@ -83,10 +85,35 @@ const CounterStat = ({ value, label, icon, delay }) => {
 const CoursePage = ({ config, navigateTo }) => {
   const [heroVisible, setHeroVisible] = useState(false);
   const [activeBatch, setActiveBatch] = useState(0);
+  const [targetDate, setTargetDate] = useState("2026-05-15");
 
   useEffect(() => {
     setTimeout(() => setHeroVisible(true), 100);
   }, []);
+
+  useEffect(() => {
+    const fetchTimer = async () => {
+      try {
+        let lookupName = config.shortName || '';
+        if (lookupName.toUpperCase().includes('JEE')) lookupName = 'JEE';
+        else if (lookupName.toUpperCase().includes('NEET')) lookupName = 'NEET';
+        else if (lookupName.toUpperCase().includes('CET') || lookupName.toUpperCase().includes('MHT')) lookupName = 'MHT-CET';
+        else if (lookupName.toUpperCase().includes('NDA')) lookupName = 'NDA';
+        else if (lookupName.toUpperCase().includes('FOUNDATION')) lookupName = 'Foundation';
+
+        const response = await fetch(`/api/timers/${lookupName}`);
+        const result = await response.json();
+        if (result.success && result.data && result.data.targetDate) {
+          setTargetDate(result.data.targetDate);
+        }
+      } catch (err) {
+        console.error("Failed to fetch exam countdown timer:", err);
+      }
+    };
+    if (config.shortName) {
+      fetchTimer();
+    }
+  }, [config.shortName]);
 
   return (
     <div className="min-h-screen bg-white selection:bg-brand-red selection:text-white pb-20">
@@ -129,11 +156,18 @@ const CoursePage = ({ config, navigateTo }) => {
 
               {/* Countdown Timer */}
               <div className="mb-10">
-                <div className="flex items-center gap-2 mb-3">
-                  <svg className="w-4 h-4 text-brand-red" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  <span className="text-white/50 text-xs font-bold uppercase tracking-widest">Exam Countdown</span>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-brand-red" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span className="text-white/50 text-xs font-bold uppercase tracking-widest">Exam Countdown</span>
+                  </div>
+                  {targetDate && (
+                    <span className="text-brand-yellow font-black uppercase tracking-widest text-xs sm:ml-auto">
+                      Target: {new Date(targetDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </span>
+                  )}
                 </div>
-                <CountdownTimer targetDate="2026-05-15" />
+                <CountdownTimer targetDate={targetDate} />
               </div>
 
               <div className="flex flex-wrap items-center gap-6">

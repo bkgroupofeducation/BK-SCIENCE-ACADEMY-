@@ -16,13 +16,13 @@ const NEETPage = ({ navigateTo }) => {
       { value: '40+', label: 'Faculty', icon: '👨‍🏫' },
       { value: '19+', label: 'Years', icon: '🏛️' },
     ],
-batches: [
+    batches: [
        {
          name: 'NEET NOVA',
          target: 'For Class 11th',
          duration: '1 Year',
          startDate: '1st April 2026',
-         fees: '₹1,50,000 (2-Year Total)',
+         fees: '₹75,000 Per Year',
          classes: '6 Days',
          features: ['Complete Board + NEET Syllabus', 'Biology Deep Dive', 'Weekly Tests', 'NCERT Mastery', 'Study Material Included', 'Parent Counseling'],
        },
@@ -31,7 +31,7 @@ batches: [
          target: 'For Class 12th',
          duration: '1 Year',
          startDate: '1st April 2026',
-         fees: '₹1,50,000 (2-Year Total)',
+         fees: '₹75,000 Per Year',
          classes: '6 Days',
          features: ['Intensive NEET Preparation', 'Board + NEET Integration', 'All India Test Series', 'Biology Focus', 'Study Material Included', 'Rank Improvement Focus'],
        },
@@ -40,7 +40,7 @@ batches: [
          target: 'For Class 12th Pass',
          duration: '1 Year',
          startDate: '1st June 2026',
-         fees: '₹1,50,000 (2-Year Total)',
+         fees: '₹75,000 Per Year',
          classes: '6 Days',
          features: ['Full Syllabus Revision', 'NCERT Deep Analysis', 'Weekly Mock Tests', 'Weak Area Focus', 'Strategy Sessions', 'Medical Career Guidance'],
        },

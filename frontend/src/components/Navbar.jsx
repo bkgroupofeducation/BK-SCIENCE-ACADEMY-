@@ -53,6 +53,7 @@ const Navbar = ({ navigateTo, onOpenCounseling }) => {
         ], action: () => navigateTo('neet-hub') }, 
         { label: "MHT-CET", action: () => navigateTo('cet') },
         { label: "NDA", action: () => navigateTo('nda') },
+        { label: "Foundation", action: () => navigateTo('foundation') },
         { label: "State Board", action: () => navigateTo('boards') },
         { label: "Student Care & Notes", action: () => navigateTo('study-center') }
       ] 

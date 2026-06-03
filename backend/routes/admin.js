@@ -20,6 +20,7 @@ const Scholarship = require('../models/Scholarship');
 const Ticket = require('../models/Ticket');
 const Topper = require('../models/Topper');
 const Popup = require('../models/Popup');
+const ExamTimer = require('../models/ExamTimer');
 
 // All admin routes require basic admin authentication
 router.use(requireAuth);
@@ -43,7 +44,8 @@ const getModel = (type) => {
     scholarships: Scholarship,
     tickets: Ticket,
     toppers: Topper,
-    popups: Popup
+    popups: Popup,
+    timers: ExamTimer
   };
   return map[type];
 };
@@ -92,6 +94,7 @@ router.get('/:module', async (req, res) => {
     const { module } = req.params;
     const { search, page = 1, limit = 50, status } = req.query;
     const Model = getModel(module);
+    console.log(`🔍 [ADMIN GET] module: "${module}", Model found: ${!!Model}`);
     if (!Model) return res.status(404).json({ success: false, message: 'Module not found' });
 
     let query = {};
@@ -168,6 +171,23 @@ router.post('/results/create', logAction('CREATE', 'RESULT'), async (req, res) =
   try {
     const result = await Result.create(req.body);
     res.status(201).json({ success: true, data: result });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * ─── TIMERS MANAGEMENT ──────────────────────────────────────────────
+ */
+router.post('/timers/create', logAction('CREATE', 'TIMER'), async (req, res) => {
+  try {
+    const { examName, targetDate, isActive } = req.body;
+    const timer = await ExamTimer.findOneAndUpdate(
+      { examName },
+      { targetDate, isActive },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+    res.status(201).json({ success: true, data: timer });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }

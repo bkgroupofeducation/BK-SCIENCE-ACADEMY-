@@ -38,6 +38,86 @@ const isSessionValid = () => {
   return token && expiry && Date.now() < expiry;
 };
 
+const toDatetimeLocal = (isoString) => {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return '';
+  const offset = date.getTimezoneOffset() * 60000;
+  return (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
+};
+
+const getRemainingDaysAndHours = (targetDateStr) => {
+  if (!targetDateStr) return { days: '', hours: '' };
+  const target = new Date(targetDateStr);
+  const now = new Date();
+  const diffMs = target.getTime() - now.getTime();
+  if (diffMs <= 0) return { days: 0, hours: 0 };
+  const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  return { days, hours };
+};
+
+const setTargetDateFromRemaining = (days, hours) => {
+  const daysVal = parseInt(days) || 0;
+  const hoursVal = parseInt(hours) || 0;
+  const targetTime = Date.now() + (daysVal * 24 * 60 * 60 * 1000) + (hoursVal * 60 * 60 * 1000);
+  return new Date(targetTime).toISOString();
+};
+
+const getFullRemainingTime = (targetDateStr) => {
+  if (!targetDateStr) return { days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true };
+  const target = new Date(targetDateStr);
+  const now = new Date();
+  const diffMs = target.getTime() - now.getTime();
+  if (diffMs <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true };
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+  return { days, hours, minutes, seconds, isPast: false };
+};
+
+const LiveCountdownPreview = ({ targetDate }) => {
+  const [rem, setRem] = React.useState(() => getFullRemainingTime(targetDate));
+
+  React.useEffect(() => {
+    setRem(getFullRemainingTime(targetDate));
+    const t = setInterval(() => {
+      setRem(getFullRemainingTime(targetDate));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [targetDate]);
+
+  if (rem.isPast) {
+    return (
+      <div className="text-[10px] text-brand-red font-black bg-red-50 px-4 py-3 rounded-2xl border border-red-100 flex justify-between items-center w-full">
+        <span>Calculated Remaining Time:</span>
+        <span className="uppercase tracking-widest text-[9px]">Timer Expired / Past Target</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-gray-150 p-4 rounded-2xl flex flex-col gap-2 w-full">
+      <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Calculated Remaining Time</div>
+      <div className="flex gap-2 justify-center">
+        {[
+          { label: 'Days', val: rem.days },
+          { label: 'Hours', val: rem.hours },
+          { label: 'Mins', val: rem.minutes },
+          { label: 'Secs', val: rem.seconds }
+        ].map((item, i) => (
+          <div key={i} className="bg-brand-dark text-white rounded-xl px-3 py-2 text-center min-w-[60px] shadow-sm">
+            <div className="text-base font-black leading-none">{String(item.val).padStart(2, '0')}</div>
+            <div className="text-[7px] text-white/60 uppercase tracking-widest mt-1">{item.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 /* ─── Stat Card ───────────────────────────────────────── */
 const StatCard = ({ icon: Icon, value, label, color, badge, onClick }) => (
   <div 
@@ -83,11 +163,16 @@ const AdminPanel = ({ navigateTo }) => {
   const [newTicket, setNewTicket] = useState(null);
   const [selectedPdfItem, setSelectedPdfItem] = useState(null);
   const pdfTemplateRef = useRef(null);
+  const [createTargetDate, setCreateTargetDate] = useState(() => new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString());
 
   const getEditFormTabs = (item) => {
     if (!item) return [];
     const keys = Object.keys(item).filter(k => !['_id', '__v', 'createdAt', 'updatedAt', 'password'].includes(k));
     
+    if (activeTab === 'timers') {
+      return [{ id: 'primary', label: 'Exam Timer Details', keys }];
+    }
+
     const tabsConfig = [
       { id: 'primary', label: 'Primary Info', keys: [] },
       { id: 'academic', label: 'Academic Details', keys: [] },
@@ -243,6 +328,7 @@ const AdminPanel = ({ navigateTo }) => {
     { id: 'toppers',        icon: Play,            label: 'Student Care' },
     { id: 'pdfs',           icon: FileText,        label: 'Notes' },
     { id: 'popups',         icon: Upload,          label: 'Popup Manager' },
+    { id: 'timers',         icon: Calendar,        label: 'Exam Timers' },
     { id: 'scholarship-types', icon: Edit3,           label: 'Scholarship Settings' },
     { id: 'scholarship-stats', icon: TrendingUp,     label: 'Scholarship Stats' },
     { id: 'admins',         icon: Shield,          label: 'Admin Staff', superOnly: true },
@@ -673,6 +759,11 @@ const AdminPanel = ({ navigateTo }) => {
                 <Award size={14} /> New Scholarship
               </button>
             )}
+            {activeTab === 'timers' && (
+              <button onClick={() => setShowPdfUpload('timer')} className="flex items-center gap-2 px-5 py-2.5 bg-brand-red text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-dark transition-all">
+                <Calendar size={14} /> New Timer
+              </button>
+            )}
             {activeTab === 'toppers' && (
               <button onClick={() => setShowPdfUpload('topper')} className="flex items-center gap-2 px-5 py-2.5 bg-brand-red text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-dark transition-all">
                 <Trophy size={14} /> Add Topper
@@ -866,7 +957,7 @@ const AdminPanel = ({ navigateTo }) => {
                             <div className="flex flex-col">
                               <div className="flex items-center gap-2">
                                 <span className="font-black text-brand-dark uppercase tracking-tight text-sm">
-                                  {item.studentName || item.fullName || (item.firstName ? `${item.firstName} ${item.surname}` : item.name || item.studentId || item.title || item.username)}
+                                  {item.studentName || item.fullName || (item.firstName ? `${item.firstName} ${item.surname}` : item.name || item.studentId || item.title || item.username || item.examName)}
                                 </span>
                                 {activeTab === 'admissions' && (
                                   <span className="bg-[#1a1a1a] text-orange-400 font-mono text-[9px] px-2 py-0.5 rounded border border-white/5 shadow-sm">
@@ -874,6 +965,14 @@ const AdminPanel = ({ navigateTo }) => {
                                   </span>
                                 )}
                               </div>
+                              
+                              {activeTab === 'timers' && (
+                                <div className="flex flex-col gap-1 mt-2">
+                                  <span className="text-blue-600 text-[10px] font-black uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max">
+                                    📅 Target Date: {new Date(item.targetDate).toLocaleString()}
+                                  </span>
+                                </div>
+                              )}
                               
                               {activeTab === 'counseling' && (
                                 <div className="flex flex-col gap-1 mt-2">
@@ -925,7 +1024,9 @@ const AdminPanel = ({ navigateTo }) => {
                                 {item.currentClass && <span className="text-indigo-600 text-[10px] font-black uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded">🏫 {item.currentClass}</span>}
                                 {item.course && <span className="text-indigo-600 text-[10px] font-black uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded">📚 {item.course}</span>}
                                 {item.schoolName && <span className="text-gray-400 text-[10px] font-bold">🏫 {item.schoolName}</span>}
-                                <span className="text-gray-300 text-[10px] font-bold">📅 {new Date(item.createdAt).toLocaleDateString()}</span>
+                                {activeTab !== 'timers' && (
+                                  <span className="text-gray-300 text-[10px] font-bold">📅 {new Date(item.createdAt).toLocaleDateString()}</span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -941,7 +1042,7 @@ const AdminPanel = ({ navigateTo }) => {
                           </div>
                         </td>
                         <td className="px-6 py-6">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                          <div className="flex items-center justify-end gap-2 transition-all">
                             {(activeTab === 'admissions' || activeTab === 'counseling') && (
                               <button onClick={() => downloadFormPDF(item)} className="p-2 text-brand-red hover:bg-brand-red/5 rounded-lg transition-all" title="Download Official Receipt">
                                 <FileText size={16} />
@@ -991,11 +1092,13 @@ const AdminPanel = ({ navigateTo }) => {
                         )}
                         <div className="flex flex-col">
                           <h4 className="font-black text-brand-dark uppercase tracking-tight text-sm leading-tight">
-                            {item.studentName || item.fullName || (item.firstName ? `${item.firstName} ${item.surname}` : item.name || item.title || item.username)}
+                            {item.studentName || item.fullName || (item.firstName ? `${item.firstName} ${item.surname}` : item.name || item.title || item.username || item.examName)}
                           </h4>
-                          <span className="text-[10px] text-gray-400 font-bold mt-1.5 uppercase tracking-widest">
-                            {new Date(item.createdAt).toLocaleDateString()}
-                          </span>
+                          {activeTab !== 'timers' && (
+                            <span className="text-[10px] text-gray-400 font-bold mt-1.5 uppercase tracking-widest">
+                              {new Date(item.createdAt).toLocaleDateString()}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${
@@ -1011,6 +1114,11 @@ const AdminPanel = ({ navigateTo }) => {
                       {item.currentClass && <div className="text-[10px] text-indigo-600 font-black uppercase tracking-tight">🏫 {item.currentClass}</div>}
                       {item.stream && <div className="text-[10px] text-brand-red font-black uppercase tracking-tight">📚 {item.stream}</div>}
                       {item.careerInterest && <div className="text-[10px] text-brand-red font-black uppercase tracking-tight col-span-2">🚀 {item.careerInterest}</div>}
+                      {activeTab === 'timers' && (
+                        <div className="text-[10px] text-blue-600 font-black uppercase tracking-tight col-span-2 bg-blue-50 p-2 rounded-lg border border-blue-100">
+                          📅 Target Date: {new Date(item.targetDate).toLocaleString()}
+                        </div>
+                      )}
                       {activeTab === 'counseling' && (
                         <div className="text-[10px] text-blue-600 font-black uppercase tracking-tight col-span-2 bg-blue-50 p-2 rounded-lg border border-blue-100">
                           📅 {item.appointmentDate} • 🕒 {item.appointmentTime} ({item.presence})
@@ -1308,7 +1416,7 @@ const AdminPanel = ({ navigateTo }) => {
                       const isScholarship = activeTab === 'scholarship-types';
                       const label = isScholarship ? key.charAt(0).toUpperCase() + key.slice(1) : key;
                       return (
-                        <div key={key} className={`space-y-1.5 animate-fade-in flex flex-col justify-start ${key === 'description' ? 'md:col-span-2' : ''}`}>
+                        <div key={key} className={`space-y-1.5 animate-fade-in flex flex-col justify-start ${key === 'description' || key === 'targetDate' ? 'md:col-span-2' : ''}`}>
                           <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">{label}</label>
                           {key === 'status' ? (
                             <select 
@@ -1318,6 +1426,47 @@ const AdminPanel = ({ navigateTo }) => {
                             >
                               <option>New</option><option>In Progress</option><option>Contacted</option><option>Scheduled</option><option>Approved</option><option>Verified</option><option>Resolved</option><option>Closed</option><option>Rejected</option>
                             </select>
+                          ) : key === 'examName' ? (
+                            <select 
+                              value={editingItem[key] || 'JEE'}
+                              onChange={e => setEditingItem({...editingItem, [key]: e.target.value})}
+                              className="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none font-bold text-sm focus:border-brand-red"
+                            >
+                              <option value="JEE">JEE</option>
+                              <option value="NEET">NEET</option>
+                              <option value="MHT-CET">MHT-CET</option>
+                              <option value="NDA">NDA</option>
+                              <option value="Foundation">Foundation</option>
+                            </select>
+                          ) : key === 'isActive' ? (
+                            <select 
+                              value={editingItem[key] ? 'true' : 'false'}
+                              onChange={e => setEditingItem({...editingItem, [key]: e.target.value === 'true'})}
+                              className="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none font-bold text-sm focus:border-brand-red"
+                            >
+                              <option value="true">Active</option>
+                              <option value="false">Inactive</option>
+                            </select>
+                          ) : key === 'targetDate' ? (
+                            <div className="space-y-4 p-5 bg-gray-50 border border-gray-150 rounded-[2rem] w-full md:col-span-2">
+                              <div className="space-y-1.5 flex flex-col">
+                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Select Target Date & Time</span>
+                                <input 
+                                  type="datetime-local" 
+                                  value={toDatetimeLocal(editingItem[key])} 
+                                  onChange={e => {
+                                    const d = new Date(e.target.value);
+                                    setEditingItem({...editingItem, [key]: d.toISOString()});
+                                  }}
+                                  className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-2xl outline-none font-bold text-sm focus:border-brand-red transition-all shadow-sm"
+                                />
+                              </div>
+                              <LiveCountdownPreview targetDate={editingItem[key]} />
+                              <div className="text-[10px] text-brand-dark/70 font-bold bg-white px-4 py-3 rounded-2xl border border-gray-150 flex justify-between items-center shadow-sm">
+                                <span>Stored Target Date-Time (GMT/UTC):</span>
+                                <span className="text-brand-red font-black">{editingItem[key] ? new Date(editingItem[key]).toLocaleString() : 'Not Set'}</span>
+                              </div>
+                            </div>
                           ) : key === 'description' ? (
                             <textarea 
                               value={editingItem[key] || ''} 
@@ -1330,9 +1479,9 @@ const AdminPanel = ({ navigateTo }) => {
                               type="text" 
                               value={key === 'benefits' && Array.isArray(editingItem[key]) ? editingItem[key].join(', ') : (editingItem[key] || '')} 
                               onChange={e => {
-                                let val = e.target.value;
-                                if (key === 'benefits') val = val.split(',').map(s => s.trim());
-                                setEditingItem({...editingItem, [key]: val});
+                                  let val = e.target.value;
+                                  if (key === 'benefits') val = val.split(',').map(s => s.trim());
+                                  setEditingItem({...editingItem, [key]: val});
                               }}
                               className="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none font-bold text-sm focus:border-brand-red"
                             />
@@ -1452,6 +1601,78 @@ const AdminPanel = ({ navigateTo }) => {
                   <input name="tagColor" className="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none font-bold text-sm" placeholder="Tag Color (e.g. bg-blue-600)" />
                 </div>
                 <button type="submit" disabled={loading} className="w-full py-4 bg-brand-red text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-dark transition-all">{loading ? 'Creating...' : 'Publish Scholarship'}</button>
+                <button type="button" onClick={() => setShowPdfUpload(false)} className="w-full py-3 text-gray-400 font-bold text-[10px] uppercase tracking-widest">Cancel</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPdfUpload === 'timer' && (
+        <div className="fixed inset-0 z-[6000] flex items-center justify-center p-6 bg-brand-dark/20 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl border border-gray-100 animate-fade-scale">
+            <div className="p-10">
+              <h3 className="text-2xl font-black text-brand-dark uppercase tracking-tighter mb-2">Create Exam Timer</h3>
+              <p className="text-gray-400 text-xs font-bold mb-8">Set a countdown timer for a specific exam.</p>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const body = Object.fromEntries(fd.entries());
+                try {
+                  setLoading(true);
+                  await apiFetch('/api/admin/timers/create', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      examName: body.examName,
+                      targetDate: new Date(createTargetDate),
+                      isActive: body.isActive === 'true'
+                    }),
+                  });
+                  setShowPdfUpload(false);
+                  fetchData();
+                } catch (err) { alert(err.message); }
+                finally { setLoading(false); }
+              }} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Select Course / Exam</label>
+                  <select name="examName" className="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none font-bold text-sm focus:border-brand-red">
+                    <option value="JEE">JEE</option>
+                    <option value="NEET">NEET</option>
+                    <option value="MHT-CET">MHT-CET</option>
+                    <option value="NDA">NDA</option>
+                    <option value="Foundation">Foundation</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Target Date & Time</label>
+                  <div className="space-y-4 p-5 bg-gray-50 border border-gray-150 rounded-[2rem] w-full">
+                    <div className="space-y-1.5 flex flex-col">
+                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Select Target Date & Time</span>
+                      <input 
+                        type="datetime-local" 
+                        value={toDatetimeLocal(createTargetDate)} 
+                        onChange={e => {
+                          const d = new Date(e.target.value);
+                          setCreateTargetDate(d.toISOString());
+                        }}
+                        className="w-full px-5 py-3.5 bg-white border border-gray-250 rounded-2xl outline-none font-bold text-sm focus:border-brand-red transition-all shadow-sm"
+                      />
+                    </div>
+                    <LiveCountdownPreview targetDate={createTargetDate} />
+                    <div className="text-[10px] text-brand-dark/70 font-bold bg-white px-4 py-3 rounded-2xl border border-gray-150 flex justify-between items-center shadow-sm">
+                      <span>Target Date Preview (GMT/UTC):</span>
+                      <span className="text-brand-red font-black">{createTargetDate ? new Date(createTargetDate).toLocaleString() : 'Not Set'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Status</label>
+                  <select name="isActive" className="w-full px-5 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none font-bold text-sm">
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </select>
+                </div>
+                <button type="submit" disabled={loading} className="w-full py-4 bg-brand-red text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-dark transition-all">{loading ? 'Creating...' : 'Create Timer'}</button>
                 <button type="button" onClick={() => setShowPdfUpload(false)} className="w-full py-3 text-gray-400 font-bold text-[10px] uppercase tracking-widest">Cancel</button>
               </form>
             </div>

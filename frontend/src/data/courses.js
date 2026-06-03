@@ -132,7 +132,7 @@ batches: [
            target: 'Class 11th Students',
            duration: '1 Year',
            startDate: '1st April 2026',
-           fees: '₹1,60,000/yr',
+           fees: '₹75,000/yr',
            classes: '6 Days',
            features: ['Intensive Biology Modules', 'Chemistry Fundamentals', 'Physics for Medical', 'NCERT Master Sessions'],
          }
@@ -169,7 +169,7 @@ batches: [
            target: 'Class 12th Appeared',
            duration: '1 Year',
            startDate: '1st April 2026',
-           fees: '₹1,50,000/yr',
+           fees: '₹75,000/yr',
            classes: '6 Days',
            features: ['12th Full Board + NEET', '11th Quick Revision', 'All India Medical Test Series', 'Rank Analysis'],
          }
@@ -206,7 +206,7 @@ batches: [
            target: 'For 12th Pass Medical Students',
            duration: '1 Year',
            startDate: '1st June 2026',
-           fees: '₹1,40,000/yr',
+           fees: '₹75,000/yr',
            classes: '6 Days',
            features: ['Full Syllabus Rigor', 'Extensive Problem Bank', 'Rank Oriented Tests', 'Conceptual Doubts Sessions'],
          }

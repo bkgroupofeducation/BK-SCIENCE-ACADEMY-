@@ -20,7 +20,7 @@ const FoundationPage = ({ navigateTo }) => {
       {
         name: '11 & 12 PCM GROUP',
         target: 'For Class 11th & 12th',
-        duration: '1 Year',
+        duration: '2 Years',
         startDate: '1st April 2026',
         fees: '₹1,50,000 (2-Year Total)',
         classes: '5 Days',
@@ -29,7 +29,7 @@ const FoundationPage = ({ navigateTo }) => {
       {
         name: '11 & 12 PCB GROUP',
         target: 'For Class 11th & 12th',
-        duration: '1 Year',
+        duration: '2 Years',
         startDate: '1st April 2026',
         fees: '₹1,50,000 (2-Year Total)',
         classes: '5 Days',

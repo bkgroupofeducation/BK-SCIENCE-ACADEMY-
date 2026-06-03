@@ -14,9 +14,9 @@ const CourseSelector = ({ navigateTo }) => {
       { name: 'JEE RISE', target: 'Repeater', batch: 'June 2026', img: '/assets/jeerise.png', gradient: 'from-indigo-800 to-slate-900', shadow: 'shadow-slate-500/20', price: '60,000 Per Year' }
     ],
     'NEET': [
-      { name: 'NEET NOVA', target: 'Class 11th', batch: 'April 2026', img: '/assets/neetnova.png', gradient: 'from-red-600 to-rose-900', shadow: 'shadow-red-500/20', price: '1,50,000 Per Year' },
-      { name: 'NEET PRIME', target: 'Class 12th', batch: 'April 2026', img: '/assets/neetprime.png', gradient: 'from-rose-600 to-red-900', shadow: 'shadow-rose-500/20', price: '1,50,000 Per Year' },
-      { name: 'NEET VECTOR', target: 'Repeater', batch: 'June 2026', img: '/assets/neetvector.png', gradient: 'from-red-800 to-zinc-900', shadow: 'shadow-zinc-500/20', price: '1,50,000 Per Year' }
+      { name: 'NEET NOVA', target: 'Class 11th', batch: 'April 2026', img: '/assets/neetnova.png', gradient: 'from-red-600 to-rose-900', shadow: 'shadow-red-500/20', price: '75,000 Per Year' },
+      { name: 'NEET PRIME', target: 'Class 12th', batch: 'April 2026', img: '/assets/neetprime.png', gradient: 'from-rose-600 to-red-900', shadow: 'shadow-rose-500/20', price: '75,000 Per Year' },
+      { name: 'NEET VECTOR', target: 'Repeater', batch: 'June 2026', img: '/assets/neetvector.png', gradient: 'from-red-800 to-zinc-900', shadow: 'shadow-zinc-500/20', price: '75,000 Per Year' }
     ],
     '11th & 12th': [
       { name: '11 & 12 PCM GROUP', target: 'Class 11 & 12', batch: 'April 2026', img: '/assets/Closest image/pcm.jpeg', gradient: 'from-amber-500 to-orange-700', shadow: 'shadow-amber-500/20', price: '1,50,000 Per Year' },
