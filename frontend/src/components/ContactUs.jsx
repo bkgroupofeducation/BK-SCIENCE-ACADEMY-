@@ -32,7 +32,7 @@ const ContactUs = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-white pt-12 pb-12 px-6 relative">
+        <div className="min-h-screen bg-white pt-28 md:pt-36 pb-12 px-6 relative">
             {/* Liquid Grid Background Overlay */}
             <div className="absolute inset-0 z-0 opacity-100">
                 <GridDistortion />

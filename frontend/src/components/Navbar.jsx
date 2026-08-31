@@ -105,11 +105,9 @@ const Navbar = ({ navigateTo, onOpenCounseling }) => {
     <>
       <nav 
         ref={navRef}
-        className={`fixed top-0 left-0 right-0 z-[5000] transition-all duration-500 ${loaded ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}
+        className={`fixed top-0 left-0 right-0 z-[5000] bg-white transition-all duration-500 border-b border-gray-100/80 ${scrolled ? 'shadow-md py-1.5' : 'shadow-sm py-2.5'} ${loaded ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}
       >
-
-
-        <div className={`container mx-auto px-4 lg:px-8 flex items-center justify-between transition-all duration-500 ${scrolled ? 'bg-white shadow-2xl shadow-brand-dark/5 rounded-2xl py-1' : 'bg-white py-2 shadow-sm rounded-b-2xl'}`}>
+        <div className="w-full px-4 lg:px-8 flex items-center justify-between transition-all duration-500">
           
           <div className="flex items-center gap-6 pointer-events-auto mt-2">
             <div 

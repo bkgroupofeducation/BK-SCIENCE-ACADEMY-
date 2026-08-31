@@ -65,7 +65,7 @@ const EnquiryPage = () => {
     }
 
     return (
-        <div className="bg-white pt-24 pb-16 px-6 relative overflow-hidden">
+        <div className="bg-white pt-28 md:pt-36 pb-16 px-6 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-brand-red/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-yellow/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2 pointer-events-none" />
 

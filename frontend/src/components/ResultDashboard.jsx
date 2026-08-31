@@ -109,7 +109,7 @@ const ResultDashboard = () => {
   }, [feedback]);
 
   return (
-    <div className="min-h-screen bg-surface-1 font-sans text-slate-700 pt-16 pb-12 relative overflow-hidden">
+    <div className="min-h-screen bg-surface-1 font-sans text-slate-700 pt-28 md:pt-36 pb-12 relative overflow-hidden">
 
       {/* White-theme hero strip */}
       <div className="no-print bg-white border-b border-gray-100 shadow-sm" />

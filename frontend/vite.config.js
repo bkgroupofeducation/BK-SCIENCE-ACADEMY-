@@ -17,12 +17,12 @@ export default defineConfig({
     allowedHosts: ["almighty-clear-playtime.ngrok-free.dev"],
     proxy: {
       '/api': {
-        target: 'http://localhost:5007',
+        target: 'http://localhost:5057',
         changeOrigin: true,
         secure: false
       },
       '/uploads': {
-        target: 'http://localhost:5007',
+        target: 'http://localhost:5057',
         changeOrigin: true,
         secure: false
       }

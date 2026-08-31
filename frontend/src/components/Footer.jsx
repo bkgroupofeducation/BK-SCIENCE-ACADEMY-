@@ -30,6 +30,8 @@ const Footer = ({ navigateTo, onOpenChat, isChatOpen }) => {
     "CONTACT US": ["Contact Us", "Enquiry", "Feedback & Grevience", "JEE/NEET E-Brochure"]
   };
 
+  const BASE_COUNT = 15480;
+
   useEffect(() => {
     const handleScroll = () => {
       setScrollRotation(window.scrollY / 5);
@@ -40,17 +42,40 @@ const Footer = ({ navigateTo, onOpenChat, isChatOpen }) => {
       setShowInitialPopup(true);
     }, 5000);
 
-    // Visitor counter - increment once per session
+    // Visitor counter - instant load with baseline & fallback
+    const storedCount = parseInt(localStorage.getItem('bk_visitor_count') || BASE_COUNT, 10);
+    setVisitorCount(storedCount);
+
     const hasVisited = sessionStorage.getItem('bk_visited');
     if (!hasVisited) {
       fetch('/api/visitors/increment', { method: 'POST' })
         .then(res => res.json())
-        .then(data => { if (data.success) { setVisitorCount(data.count); sessionStorage.setItem('bk_visited', '1'); } })
-        .catch(() => {});
+        .then(data => { 
+          if (data.success && data.count) { 
+            setVisitorCount(data.count); 
+            localStorage.setItem('bk_visitor_count', data.count.toString());
+          } else {
+            const nextCount = storedCount + 1;
+            setVisitorCount(nextCount);
+            localStorage.setItem('bk_visitor_count', nextCount.toString());
+          }
+          sessionStorage.setItem('bk_visited', '1');
+        })
+        .catch(() => {
+          const nextCount = storedCount + 1;
+          setVisitorCount(nextCount);
+          localStorage.setItem('bk_visitor_count', nextCount.toString());
+          sessionStorage.setItem('bk_visited', '1');
+        });
     } else {
       fetch('/api/visitors')
         .then(res => res.json())
-        .then(data => { if (data.success) setVisitorCount(data.count); })
+        .then(data => { 
+          if (data.success && data.count) {
+            setVisitorCount(data.count);
+            localStorage.setItem('bk_visitor_count', data.count.toString());
+          }
+        })
         .catch(() => {});
     }
 

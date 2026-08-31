@@ -343,7 +343,7 @@ const OnlineCoursesPage = ({ navigateTo }) => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Banner */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-dark via-gray-900 to-brand-dark py-10 md:py-16">
+      <section className="relative overflow-hidden bg-gradient-to-br from-brand-dark via-gray-900 to-brand-dark pt-28 md:pt-36 pb-12 md:pb-16">
         <div className="absolute inset-0">
           <div className="absolute top-10 left-10 w-72 h-72 bg-brand-red/10 rounded-full blur-[100px] animate-pulse-slow"></div>
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-brand-yellow/10 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '1s' }}></div>

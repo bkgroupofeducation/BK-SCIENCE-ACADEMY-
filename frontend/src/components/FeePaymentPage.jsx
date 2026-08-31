@@ -166,7 +166,7 @@ const FeePaymentPage = ({ navigateTo }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-dark via-gray-900 to-brand-dark py-6 md:py-8">
+      <section className="relative overflow-hidden bg-gradient-to-br from-brand-dark via-gray-900 to-brand-dark pt-28 md:pt-36 pb-12 md:pb-16">
         <div className="absolute inset-0">
           <div className="absolute top-10 left-10 w-72 h-72 bg-brand-red/10 rounded-full blur-[100px]"></div>
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-brand-yellow/10 rounded-full blur-[120px]"></div>
@@ -196,7 +196,7 @@ const FeePaymentPage = ({ navigateTo }) => {
       </section>
 
       {/* Payment Section */}
-      <section className="py-4 md:py-6 -mt-8 relative z-10">
+      <section className="py-6 md:py-10 -mt-4 relative z-10">
         <div className="container mx-auto px-5 md:px-8">
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

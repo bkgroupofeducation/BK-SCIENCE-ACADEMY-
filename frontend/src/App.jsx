@@ -49,6 +49,8 @@ import SuccessCarousel from './components/SuccessCarousel';
 import PolicyModal from './components/PolicyModal';
 
 import WhyBKCareer from './components/WhyBKCareer';
+import ParentsSection from './components/ParentsSection';
+import BrochureSection from './components/BrochureSection';
 
 const Home = ({ navigateTo }) => (
   <div className="animate-fade-up">
@@ -56,6 +58,8 @@ const Home = ({ navigateTo }) => (
     <div className="animate-fade-up stagger-1">
       <CourseSelector navigateTo={navigateTo} />
     </div>
+    <ParentsSection navigateTo={navigateTo} />
+    <BrochureSection navigateTo={navigateTo} />
     <div className="animate-fade-up stagger-2">
       <BoosterCourses navigateTo={navigateTo} />
     </div>
