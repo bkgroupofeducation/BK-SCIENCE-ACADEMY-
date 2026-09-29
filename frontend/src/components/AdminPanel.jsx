@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import PopupCard from './PopupCard';
 import { apiFetch, API_BASE, getMediaUrl } from '../api';
+import ErrorBoundary from './ErrorBoundary';
 
 /* ─── Session helpers ─────────────────────────────────── */
 const TOKEN_KEY  = 'bk_admin_token';
@@ -144,7 +145,7 @@ const StatCard = ({ icon: Icon, value, label, color, badge, onClick }) => (
 /* ─── Main AdminPanel ─────────────────────────────────── */
 const AdminPanel = ({ navigateTo }) => {
   const [activeTab,    setActiveTab]    = useState('overview');
-  const [data,         setData]         = useState({ stats: null, items: [], total: 0 });
+  const [data,         setData]         = useState({ stats: null, data: [], total: 0 });
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState('');
   const [isAuth,       setIsAuth]       = useState(() => isSessionValid());
@@ -396,6 +397,7 @@ const AdminPanel = ({ navigateTo }) => {
         setPopupTitle('');
         setPopupLink('');
         setPopupFile(null);
+        setPopupPreviewUrl(null);
         setPopupOrientation('vertical');
         setPopupScale(100);
         setPopupShowOverlay(false);
@@ -495,14 +497,18 @@ const AdminPanel = ({ navigateTo }) => {
           ? '/api/scholarship/types'
           : activeTab === 'scholarship-stats'
             ? '/api/scholarship/config'
-            : `/api/admin/${activeTab}?search=${search}&page=${page}`;
+            : activeTab === 'popups'
+              ? '/api/popups/all'
+              : `/api/admin/${activeTab}?search=${search}&page=${page}`;
       
       const result = await apiFetch(endpoint);
       if (result.success) {
         if (activeTab === 'overview') setData({ stats: result.data, data: [], total: 0 });
         else {
-          const dataArray = activeTab === 'scholarship-stats' ? [result.data] : result.data;
-          setData({ stats: null, data: dataArray, total: result.total || 0 });
+          const rawData = activeTab === 'scholarship-stats'
+            ? (result.data ? [result.data] : [])
+            : (Array.isArray(result.data) ? result.data : []);
+          setData({ stats: null, data: rawData, total: result.total || rawData.length || 0 });
         }
       }
     } catch (err) {
@@ -570,7 +576,7 @@ const AdminPanel = ({ navigateTo }) => {
   const handleLogout = () => {
     clearSession();
     setIsAuth(false);
-    setData({ stats: null, items: [], total: 0 });
+    setData({ stats: null, data: [], total: 0 });
   };
 
   const handleUpdateStatus = async (id, status) => {
@@ -1364,7 +1370,7 @@ const AdminPanel = ({ navigateTo }) => {
                             : 'border-gray-200 hover:border-brand-red/40 hover:bg-gray-50 text-gray-400'
                         }`}
                       >
-                        {popupPreviewUrl ? (
+                        {popupFile && popupPreviewUrl ? (
                           <div className="flex items-center gap-3 w-full">
                             <img 
                               src={popupPreviewUrl} 
@@ -1372,8 +1378,8 @@ const AdminPanel = ({ navigateTo }) => {
                               className="w-14 h-14 object-cover rounded-xl border border-green-200 shadow-sm"
                             />
                             <div className="text-left overflow-hidden flex-1">
-                              <p className="text-xs font-black text-gray-800 truncate">{popupFile.name}</p>
-                              <p className="text-[9px] font-bold text-green-600">{(popupFile.size / 1024).toFixed(0)} KB • Ready to upload</p>
+                              <p className="text-xs font-black text-gray-800 truncate">{popupFile?.name || 'Selected flyer'}</p>
+                              <p className="text-[9px] font-bold text-green-600">{popupFile?.size ? (popupFile.size / 1024).toFixed(0) : '0'} KB • Ready to upload</p>
                               <span className="text-[8px] font-black uppercase text-brand-red tracking-wider">Click to change</span>
                             </div>
                           </div>
@@ -2517,10 +2523,10 @@ const AdminPanel = ({ navigateTo }) => {
                   type="button"
                   onClick={async () => {
                     await handleRotateExisting(editingPopupItem._id, 'cw');
-                    setEditingPopupItem(prev => ({
+                    setEditingPopupItem(prev => prev ? ({
                       ...prev,
                       orientation: prev.orientation === 'horizontal' ? 'vertical' : 'horizontal'
-                    }));
+                    }) : null);
                   }}
                   className="flex-1 py-2 px-3 bg-slate-900 hover:bg-brand-red text-white rounded-xl text-[9px] font-black uppercase tracking-wider inline-flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95"
                   title="Rotate image 90° clockwise"
@@ -2532,11 +2538,11 @@ const AdminPanel = ({ navigateTo }) => {
                   type="button"
                   onClick={async () => {
                     await handleAutoAdjustExisting(editingPopupItem._id);
-                    setEditingPopupItem(prev => ({
+                    setEditingPopupItem(prev => prev ? ({
                       ...prev,
                       scale: 100,
                       showOverlay: false
-                    }));
+                    }) : null);
                   }}
                   className="py-2 px-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 rounded-xl text-[9px] font-black uppercase tracking-wider inline-flex items-center justify-center gap-1.5 transition-all active:scale-95"
                   title="Auto-detect dimensions and set optimal fit"
@@ -2554,7 +2560,7 @@ const AdminPanel = ({ navigateTo }) => {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setEditingPopupItem(prev => ({ ...prev, orientation: 'vertical' }))}
+                    onClick={() => setEditingPopupItem(prev => prev ? ({ ...prev, orientation: 'vertical' }) : null)}
                     className={`p-3 rounded-2xl border-2 flex items-center justify-center gap-2 text-center transition-all ${
                       editingPopupItem.orientation === 'vertical'
                         ? 'border-brand-red bg-brand-red/5 text-brand-red'
@@ -2566,7 +2572,7 @@ const AdminPanel = ({ navigateTo }) => {
 
                   <button
                     type="button"
-                    onClick={() => setEditingPopupItem(prev => ({ ...prev, orientation: 'horizontal' }))}
+                    onClick={() => setEditingPopupItem(prev => prev ? ({ ...prev, orientation: 'horizontal' }) : null)}
                     className={`p-3 rounded-2xl border-2 flex items-center justify-center gap-2 text-center transition-all ${
                       editingPopupItem.orientation === 'horizontal'
                         ? 'border-brand-red bg-brand-red/5 text-brand-red'
@@ -2594,7 +2600,7 @@ const AdminPanel = ({ navigateTo }) => {
                   max="140"
                   step="5"
                   value={editingPopupItem.scale || 100}
-                  onChange={(e) => setEditingPopupItem(prev => ({ ...prev, scale: Number(e.target.value) }))}
+                  onChange={(e) => setEditingPopupItem(prev => prev ? ({ ...prev, scale: Number(e.target.value) }) : null)}
                   className="w-full accent-brand-red h-2 bg-gray-100 rounded-lg cursor-pointer"
                 />
               </div>
@@ -2607,7 +2613,7 @@ const AdminPanel = ({ navigateTo }) => {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setEditingPopupItem(prev => ({ ...prev, showOverlay: false }))}
+                    onClick={() => setEditingPopupItem(prev => prev ? ({ ...prev, showOverlay: false }) : null)}
                     className={`p-2.5 rounded-xl border text-center transition-all ${
                       !editingPopupItem.showOverlay
                         ? 'border-brand-red bg-brand-red/5 text-brand-dark font-black'
@@ -2618,7 +2624,7 @@ const AdminPanel = ({ navigateTo }) => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEditingPopupItem(prev => ({ ...prev, showOverlay: true }))}
+                    onClick={() => setEditingPopupItem(prev => prev ? ({ ...prev, showOverlay: true }) : null)}
                     className={`p-2.5 rounded-xl border text-center transition-all ${
                       editingPopupItem.showOverlay
                         ? 'border-brand-red bg-brand-red/5 text-brand-dark font-black'
@@ -2637,7 +2643,7 @@ const AdminPanel = ({ navigateTo }) => {
                   <input 
                     type="text"
                     value={editingPopupItem.title || ''}
-                    onChange={(e) => setEditingPopupItem(prev => ({ ...prev, title: e.target.value }))}
+                    onChange={(e) => setEditingPopupItem(prev => prev ? ({ ...prev, title: e.target.value }) : null)}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold"
                   />
                 </div>
@@ -2646,7 +2652,7 @@ const AdminPanel = ({ navigateTo }) => {
                   <input 
                     type="url"
                     value={editingPopupItem.link || ''}
-                    onChange={(e) => setEditingPopupItem(prev => ({ ...prev, link: e.target.value }))}
+                    onChange={(e) => setEditingPopupItem(prev => prev ? ({ ...prev, link: e.target.value }) : null)}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold"
                   />
                 </div>
@@ -2676,4 +2682,10 @@ const AdminPanel = ({ navigateTo }) => {
   );
 };
 
-export default AdminPanel;
+const SafeAdminPanel = (props) => (
+  <ErrorBoundary>
+    <AdminPanel {...props} />
+  </ErrorBoundary>
+);
+
+export default SafeAdminPanel;
