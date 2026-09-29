@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { API_BASE } from '../api';
+import PopupCard from './PopupCard';
 
 const AdPopup = ({ onOpenCounseling }) => {
   const [popups, setPopups] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -11,33 +13,41 @@ const AdPopup = ({ onOpenCounseling }) => {
       try {
         const res = await fetch(`${API_BASE}/api/popups`);
         const data = await res.json();
-        
-        const defaultCounseling = {
-          _id: 'default-counseling',
-          title: 'Free Career Guidance & Counseling',
-          image: '/assets/123.jpeg',
-          isDefaultCounseling: true,
-          isActive: true
-        };
 
         let activeBanners = [];
-        if (data.success && data.data) {
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
           activeBanners = data.data;
+        } else {
+          // Fallback default counseling banner if none uploaded
+          activeBanners = [{
+            _id: 'default-counseling',
+            title: 'Free Career Guidance & Counseling',
+            image: '/assets/123.jpeg',
+            orientation: 'vertical',
+            scale: 100,
+            showOverlay: true,
+            isDefaultCounseling: true,
+            isActive: true
+          }];
         }
 
-        // Merge active banners and default counseling slide so they show side-by-side
-        setPopups([...activeBanners, defaultCounseling]);
+        setPopups(activeBanners);
 
-        // Show popup after a 3.5s delay (balancing UX and engagement)
-        setTimeout(() => {
+        // Show popup after 3.5s delay
+        const timer = setTimeout(() => {
           setIsVisible(true);
         }, 3500);
+
+        return () => clearTimeout(timer);
       } catch (err) {
         console.error('Failed to load active popups:', err);
         setPopups([{
           _id: 'default-counseling',
           title: 'Free Career Guidance & Counseling',
           image: '/assets/123.jpeg',
+          orientation: 'vertical',
+          scale: 100,
+          showOverlay: true,
           isDefaultCounseling: true,
           isActive: true
         }]);
@@ -46,6 +56,7 @@ const AdPopup = ({ onOpenCounseling }) => {
         }, 3500);
       }
     };
+
     fetchPopups();
   }, []);
 
@@ -62,82 +73,82 @@ const AdPopup = ({ onOpenCounseling }) => {
     handleClose();
   };
 
+  const handlePrev = (e) => {
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev === 0 ? popups.length - 1 : prev - 1));
+  };
+
+  const handleNext = (e) => {
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev === popups.length - 1 ? 0 : prev + 1));
+  };
+
   if (!isVisible || popups.length === 0) return null;
 
+  const currentPopup = popups[currentIndex] || popups[0];
+
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 md:p-8 overflow-y-auto bg-black/70 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-6 md:p-8 overflow-y-auto bg-black/80 backdrop-blur-md animate-fade-in">
       {/* Backdrop Close Handler */}
       <div 
         className="absolute inset-0 cursor-default"
         onClick={handleClose}
       />
-      
-      {/* Cards Container */}
-      <div className="relative z-[10001] flex flex-col md:flex-row gap-6 max-w-5xl w-full justify-center items-center my-auto animate-pop-in">
-        {popups.map((popup) => {
-          const isDefault = popup.isDefaultCounseling;
-          const imageUrl = popup.image && popup.image.startsWith('/uploads') 
-            ? `${API_BASE}${popup.image}` 
-            : popup.image || '';
 
-          return (
-            <div
-              key={popup._id}
-              className="relative w-full max-w-[340px] bg-white rounded-[2rem] overflow-hidden shadow-[0_25px_50px_rgba(0,0,0,0.35)] border border-gray-100 flex flex-col transform hover:scale-[1.02] transition-all duration-300"
+      {/* Main Container */}
+      <div className="relative z-[10001] w-full flex flex-col items-center justify-center my-auto animate-pop-in">
+        <div className="relative flex items-center justify-center w-full">
+          {/* Previous Arrow for Carousel */}
+          {popups.length > 1 && (
+            <button
+              onClick={handlePrev}
+              className="absolute left-2 sm:-left-6 md:-left-12 z-50 p-2.5 sm:p-3 bg-black/70 hover:bg-brand-red text-white backdrop-blur-md rounded-full border border-white/20 transition-all duration-200 active:scale-90 shadow-xl"
+              title="Previous Announcement"
             >
-              {/* Close Button on each card */}
-              <button 
-                onClick={handleClose}
-                className="absolute top-4 right-4 z-[10005] w-8 h-8 bg-white/90 backdrop-blur-md text-brand-dark rounded-full flex items-center justify-center shadow-md border border-gray-200 hover:bg-brand-red hover:text-white transition-all duration-300 active:scale-95"
-              >
-                <X size={15} strokeWidth={2.5} />
-              </button>
+              <ChevronLeft size={20} />
+            </button>
+          )}
 
-              {/* Card Body - Displays full photo for all slides including Free Counseling */}
-              <div 
-                className="relative aspect-[4/5] bg-gray-900 flex flex-col justify-end overflow-hidden cursor-pointer"
-                onClick={() => handlePopupClick(popup)}
-              >
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <img 
-                    src={imageUrl} 
-                    alt={popup.title || "Special Promotion"} 
-                    className="w-full h-full object-contain hover:scale-[1.03] transition-transform duration-700 ease-out"
-                  />
-                </div>
-                
-                {/* Ambient Shadow Overlay - ALWAYS VISIBLE for premium accessibility */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-transparent flex flex-col justify-end p-6 pb-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles size={14} className="text-brand-yellow animate-pulse" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-yellow bg-brand-yellow/10 px-2 py-0.5 rounded-full border border-brand-yellow/20">
-                      {popup.link ? "Special Offer" : "Free Guidance"}
-                    </span>
-                  </div>
-                  <h2 className="text-white text-base md:text-lg font-black uppercase tracking-tight mb-3 drop-shadow-md">
-                    {popup.title || (popup.link ? "Explore Program" : "Free Career Counseling")}
-                  </h2>
-                  
-                  {/* Premium Call to Action Button */}
-                  <div className="flex items-center gap-2">
-                    <div className="bg-brand-red text-white py-2.5 px-5 rounded-2xl font-black text-[9px] uppercase tracking-widest inline-flex items-center gap-2 shadow-lg shadow-brand-red/35 hover:bg-brand-dark hover:shadow-brand-red/10 transition-all duration-300 transform active:scale-95">
-                      {popup.link ? "Learn More" : "Register for Counseling"}
-                      <span className="text-[10px] font-bold">→</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* Popup Card */}
+          <PopupCard
+            popup={currentPopup}
+            onClose={handleClose}
+            onClick={handlePopupClick}
+            isInteractive={true}
+          />
 
-              {/* Bottom Banner */}
-              <div className="p-3.5 bg-[#1a1a2e] text-center border-t border-white/5 flex items-center justify-center gap-2 select-none">
-                <span className="w-1 h-1 rounded-full bg-brand-yellow animate-pulse" />
-                <p className="text-white/50 text-[8px] font-black uppercase tracking-[0.25em]">
-                  BK Science Academy Elite Portal
-                </p>
-              </div>
-            </div>
-          );
-        })}
+          {/* Next Arrow for Carousel */}
+          {popups.length > 1 && (
+            <button
+              onClick={handleNext}
+              className="absolute right-2 sm:-right-6 md:-right-12 z-50 p-2.5 sm:p-3 bg-black/70 hover:bg-brand-red text-white backdrop-blur-md rounded-full border border-white/20 transition-all duration-200 active:scale-90 shadow-xl"
+              title="Next Announcement"
+            >
+              <ChevronRight size={20} />
+            </button>
+          )}
+        </div>
+
+        {/* Dots Indicator when multiple popups */}
+        {popups.length > 1 && (
+          <div className="flex items-center gap-2 mt-4 z-50">
+            {popups.map((p, idx) => (
+              <button
+                key={p._id || idx}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIndex(idx);
+                }}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  idx === currentIndex 
+                    ? 'w-6 bg-brand-red shadow-lg shadow-brand-red/50' 
+                    : 'w-2 bg-white/40 hover:bg-white/70'
+                }`}
+                title={`View announcement ${idx + 1}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

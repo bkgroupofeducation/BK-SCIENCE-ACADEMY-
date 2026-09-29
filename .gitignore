@@ -5,6 +5,11 @@
 dist/
 build/
 node_modules/
+mongodb_data/
+scratch/
+whois_out.txt
+rdap*.json
+query
 
 # Media and Large Files
 *.mp4

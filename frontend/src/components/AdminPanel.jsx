@@ -4,8 +4,10 @@ import {
   Users, MessageSquare, LayoutDashboard, Search, Download,
   LogOut, ShieldCheck, Shield, TrendingUp, ArrowRight, Filter,
   Calendar, GraduationCap, AlertCircle, RefreshCw, X, ChevronLeft, ChevronRight,
-  FileText, CreditCard, HelpCircle, UserPlus, ClipboardList, Upload, Eye, Trash2, Edit3, Save, ExternalLink, Award, Plus, Ticket, Bell, Phone, Trophy, Play, Menu
+  FileText, CreditCard, HelpCircle, UserPlus, ClipboardList, Upload, Eye, Trash2, Edit3, Save, ExternalLink, Award, Plus, Ticket, Bell, Phone, Trophy, Play, Menu,
+  Sliders, Maximize2, Check, RotateCw, RotateCcw, Wand2
 } from 'lucide-react';
+import PopupCard from './PopupCard';
 import { apiFetch, API_BASE } from '../api';
 
 /* ─── Session helpers ─────────────────────────────────── */
@@ -255,8 +257,121 @@ const AdminPanel = ({ navigateTo }) => {
   const [popupTitle, setPopupTitle] = useState('');
   const [popupLink, setPopupLink] = useState('');
   const [popupFile, setPopupFile] = useState(null);
+  const [popupOrientation, setPopupOrientation] = useState('vertical'); // 'vertical' | 'horizontal'
+  const [popupScale, setPopupScale] = useState(100); // 60 to 140 (%)
+  const [popupShowOverlay, setPopupShowOverlay] = useState(false); // boolean
+  const [popupPreviewUrl, setPopupPreviewUrl] = useState(null);
   const [popupLoading, setPopupLoading] = useState(false);
+  const [previewModalItem, setPreviewModalItem] = useState(null); // Full screen simulation modal
+  const [editingPopupItem, setEditingPopupItem] = useState(null); // Settings modal for existing popup
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (popupFile) {
+      const url = URL.createObjectURL(popupFile);
+      setPopupPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPopupPreviewUrl(null);
+    }
+  }, [popupFile]);
+
+  /* ── Rotation & Auto-Adjust Helpers ── */
+  const rotateImageFile = (file, angle = 90) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const isQuarterTurn = angle === 90 || angle === 270;
+        canvas.width = isQuarterTurn ? img.naturalHeight : img.naturalWidth;
+        canvas.height = isQuarterTurn ? img.naturalWidth : img.naturalHeight;
+
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((angle * Math.PI) / 180);
+        ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+
+        URL.revokeObjectURL(url);
+        canvas.toBlob((blob) => {
+          if (!blob) return resolve(file);
+          const rotatedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + "-rot.jpg", {
+            type: 'image/jpeg'
+          });
+          resolve(rotatedFile);
+        }, 'image/jpeg', 0.95);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(file);
+      };
+      img.src = url;
+    });
+  };
+
+  const handleRotateDraft = async (angle = 90) => {
+    if (!popupFile) return;
+    try {
+      setPopupLoading(true);
+      const rotated = await rotateImageFile(popupFile, angle);
+      setPopupFile(rotated);
+      // Auto-swap orientation if 90 deg turn
+      if (angle === 90 || angle === 270) {
+        setPopupOrientation(prev => prev === 'vertical' ? 'horizontal' : 'vertical');
+      }
+    } catch (err) {
+      console.error('Rotation error:', err);
+    } finally {
+      setPopupLoading(false);
+    }
+  };
+
+  const handleAutoAdjustDraft = () => {
+    if (!popupFile) return;
+    const img = new Image();
+    const url = URL.createObjectURL(popupFile);
+    img.onload = () => {
+      const isLandscape = img.naturalWidth >= img.naturalHeight;
+      setPopupOrientation(isLandscape ? 'horizontal' : 'vertical');
+      setPopupScale(100);
+      setPopupShowOverlay(false);
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  };
+
+  const handleRotateExisting = async (id, direction = 'cw') => {
+    try {
+      setPopupLoading(true);
+      const res = await apiFetch(`/api/popups/${id}/rotate`, {
+        method: 'PUT',
+        body: JSON.stringify({ direction })
+      });
+      if (res.success) {
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to rotate popup');
+    } finally {
+      setPopupLoading(false);
+    }
+  };
+
+  const handleAutoAdjustExisting = async (id) => {
+    try {
+      setPopupLoading(true);
+      const res = await apiFetch(`/api/popups/${id}/auto-adjust`, {
+        method: 'PUT'
+      });
+      if (res.success) {
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to auto-adjust popup');
+    } finally {
+      setPopupLoading(false);
+    }
+  };
 
   const handleUploadPopup = async (e) => {
     e.preventDefault();
@@ -268,6 +383,9 @@ const AdminPanel = ({ navigateTo }) => {
       formData.append('image', popupFile);
       formData.append('title', popupTitle);
       formData.append('link', popupLink);
+      formData.append('orientation', popupOrientation);
+      formData.append('scale', popupScale);
+      formData.append('showOverlay', popupShowOverlay);
 
       const res = await apiFetch('/api/popups/upload', {
         method: 'POST',
@@ -278,11 +396,41 @@ const AdminPanel = ({ navigateTo }) => {
         setPopupTitle('');
         setPopupLink('');
         setPopupFile(null);
+        setPopupOrientation('vertical');
+        setPopupScale(100);
+        setPopupShowOverlay(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
         fetchData();
       }
     } catch (err) {
       alert(err.message || 'Failed to upload popup');
+    } finally {
+      setPopupLoading(false);
+    }
+  };
+
+  const handleUpdatePopup = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!editingPopupItem) return;
+    try {
+      setPopupLoading(true);
+      const res = await apiFetch(`/api/popups/${editingPopupItem._id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          title: editingPopupItem.title,
+          link: editingPopupItem.link,
+          orientation: editingPopupItem.orientation,
+          scale: editingPopupItem.scale,
+          showOverlay: editingPopupItem.showOverlay,
+          isActive: editingPopupItem.isActive
+        })
+      });
+      if (res.success) {
+        setEditingPopupItem(null);
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to update popup settings');
     } finally {
       setPopupLoading(false);
     }
@@ -1163,46 +1311,84 @@ const AdminPanel = ({ navigateTo }) => {
             <div className="space-y-8 md:space-y-10 animate-fade-up">
               <div>
                 <h2 className="text-2xl font-black text-brand-dark uppercase tracking-tighter">
-                  Popup Promotion Manager
+                  Popup Promotion & Announcement Manager
                 </h2>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                  Configure custom promotional banners and counseling popups globally
+                  Configure horizontal & vertical banners, fine-tune display scale, preview live appearance, and manage popups
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Upload Form Panel */}
-                <div className="lg:col-span-1 bg-white p-6 md:p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6 h-fit">
-                  <div>
-                    <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest">
-                      Upload New Popup
-                    </h3>
-                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mt-1">
-                      Banners will display in a carousel if multiple are active
-                    </p>
+                <div className="lg:col-span-5 bg-white p-6 md:p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6 h-fit">
+                  <div className="flex items-center justify-between border-b border-gray-50 pb-4">
+                    <div>
+                      <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest">
+                        Create New Popup
+                      </h3>
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">
+                        Set layout, scaling, and preview before publishing
+                      </p>
+                    </div>
+                    <span className="p-2 bg-brand-red/10 text-brand-red rounded-xl">
+                      <Sliders size={18} />
+                    </span>
                   </div>
 
                   <form onSubmit={handleUploadPopup} className="space-y-5">
-                    {/* Image Upload Box */}
+                    {/* Step 1: Image Upload Box */}
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                        Select Popup Image *
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                          1. Select Banner / Poster Image *
+                        </label>
+                        {popupFile && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPopupFile(null);
+                              if (fileInputRef.current) fileInputRef.current.value = '';
+                            }}
+                            className="text-[9px] font-bold text-brand-red hover:underline uppercase tracking-wider"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+
                       <div 
                         onClick={() => fileInputRef.current?.click()}
-                        className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
+                        className={`border-2 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${
                           popupFile 
-                            ? 'border-green-400 bg-green-50/20 text-green-600' 
+                            ? 'border-green-400 bg-green-50/30 text-green-700' 
                             : 'border-gray-200 hover:border-brand-red/40 hover:bg-gray-50 text-gray-400'
                         }`}
                       >
-                        <Upload size={24} className={popupFile ? "text-green-500 animate-bounce" : "text-gray-400"} />
-                        <span className="text-xs font-black uppercase tracking-wider text-center">
-                          {popupFile ? popupFile.name : "Choose or drag banner photo"}
-                        </span>
-                        <span className="text-[9px] font-bold text-gray-400 tracking-wider">
-                          Support JPG, PNG up to 10MB
-                        </span>
+                        {popupPreviewUrl ? (
+                          <div className="flex items-center gap-3 w-full">
+                            <img 
+                              src={popupPreviewUrl} 
+                              alt="Thumbnail" 
+                              className="w-14 h-14 object-cover rounded-xl border border-green-200 shadow-sm"
+                            />
+                            <div className="text-left overflow-hidden flex-1">
+                              <p className="text-xs font-black text-gray-800 truncate">{popupFile.name}</p>
+                              <p className="text-[9px] font-bold text-green-600">{(popupFile.size / 1024).toFixed(0)} KB • Ready to upload</p>
+                              <span className="text-[8px] font-black uppercase text-brand-red tracking-wider">Click to change</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload size={24} className="text-gray-400" />
+                            <span className="text-xs font-black uppercase tracking-wider text-center text-gray-700">
+                              Choose or drag flyer / banner photo
+                            </span>
+                            <span className="text-[9px] font-bold text-gray-400 tracking-wider">
+                              Supports JPG, PNG, WEBP up to 10MB
+                            </span>
+                          </>
+                        )}
+
                         <input 
                           type="file" 
                           ref={fileInputRef} 
@@ -1211,46 +1397,264 @@ const AdminPanel = ({ navigateTo }) => {
                           accept="image/*"
                         />
                       </div>
+
+                      {/* Image Rotation & Auto-Adjust Controls */}
+                      {popupFile && (
+                        <div className="flex items-center gap-2 pt-1 animate-fade-in">
+                          <button
+                            type="button"
+                            onClick={() => handleRotateDraft(90)}
+                            className="flex-1 py-2 px-3 bg-slate-900 hover:bg-brand-red text-white rounded-xl text-[9px] font-black uppercase tracking-wider inline-flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95"
+                            title="Rotate image 90° clockwise"
+                          >
+                            <RotateCw size={12} />
+                            Rotate 90°
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRotateDraft(270)}
+                            className="py-2 px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-[9px] font-black uppercase tracking-wider inline-flex items-center justify-center gap-1 transition-all active:scale-95"
+                            title="Rotate image 90° counter-clockwise"
+                          >
+                            <RotateCcw size={12} />
+                            90° Left
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleAutoAdjustDraft}
+                            className="py-2 px-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 rounded-xl text-[9px] font-black uppercase tracking-wider inline-flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                            title="Auto-detect orientation & fit settings"
+                          >
+                            <Wand2 size={12} />
+                            Auto-Fit
+                          </button>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Title */}
+                    {/* Step 2: Orientation Setting (Horizontal vs Vertical) */}
                     <div className="space-y-2">
                       <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                        Promotion Title (Optional)
+                        2. Orientation & Aspect Ratio *
                       </label>
-                      <input 
-                        type="text"
-                        value={popupTitle}
-                        onChange={(e) => setPopupTitle(e.target.value)}
-                        placeholder="e.g. Free Career Counseling 2026"
-                        className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-xs focus:border-brand-red focus:bg-white transition-all"
-                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        {/* Vertical (Portrait) */}
+                        <button
+                          type="button"
+                          onClick={() => setPopupOrientation('vertical')}
+                          className={`p-3.5 rounded-2xl border-2 flex flex-col items-center justify-center gap-2 text-center transition-all ${
+                            popupOrientation === 'vertical'
+                              ? 'border-brand-red bg-brand-red/5 text-brand-red shadow-sm'
+                              : 'border-gray-100 hover:border-gray-200 bg-gray-50/50 text-gray-500'
+                          }`}
+                        >
+                          <div className={`w-6 h-8 rounded-md border-2 flex items-center justify-center ${
+                            popupOrientation === 'vertical' ? 'border-brand-red bg-brand-red/10' : 'border-gray-300'
+                          }`}>
+                            <span className="text-[7px] font-black">9:16</span>
+                          </div>
+                          <div>
+                            <span className="block text-[10px] font-black uppercase tracking-wider">
+                              Vertical (Portrait)
+                            </span>
+                            <span className="block text-[8px] font-bold opacity-70">
+                              Posters & Flyers
+                            </span>
+                          </div>
+                        </button>
+
+                        {/* Horizontal (Landscape) */}
+                        <button
+                          type="button"
+                          onClick={() => setPopupOrientation('horizontal')}
+                          className={`p-3.5 rounded-2xl border-2 flex flex-col items-center justify-center gap-2 text-center transition-all ${
+                            popupOrientation === 'horizontal'
+                              ? 'border-brand-red bg-brand-red/5 text-brand-red shadow-sm'
+                              : 'border-gray-100 hover:border-gray-200 bg-gray-50/50 text-gray-500'
+                          }`}
+                        >
+                          <div className={`w-8 h-6 rounded-md border-2 flex items-center justify-center ${
+                            popupOrientation === 'horizontal' ? 'border-brand-red bg-brand-red/10' : 'border-gray-300'
+                          }`}>
+                            <span className="text-[7px] font-black">16:9</span>
+                          </div>
+                          <div>
+                            <span className="block text-[10px] font-black uppercase tracking-wider">
+                              Horizontal (Landscape)
+                            </span>
+                            <span className="block text-[8px] font-bold opacity-70">
+                              Wide Banners
+                            </span>
+                          </div>
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Link */}
+                    {/* Step 3: Scale Setting (Size) */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between ml-1">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                          3. Popup Display Scale (Zoom)
+                        </label>
+                        <span className="px-2.5 py-0.5 bg-brand-dark text-white rounded-lg font-black text-[10px]">
+                          {popupScale}%
+                        </span>
+                      </div>
+
+                      {/* Range slider */}
+                      <input 
+                        type="range" 
+                        min="60" 
+                        max="140" 
+                        step="5"
+                        value={popupScale}
+                        onChange={(e) => setPopupScale(Number(e.target.value))}
+                        className="w-full accent-brand-red h-2 bg-gray-100 rounded-lg cursor-pointer"
+                      />
+
+                      {/* Quick presets */}
+                      <div className="flex items-center justify-between gap-1">
+                        {[
+                          { label: 'Compact', val: 75 },
+                          { label: 'Small', val: 90 },
+                          { label: 'Normal', val: 100 },
+                          { label: 'Large', val: 115 },
+                          { label: 'XL', val: 130 }
+                        ].map((preset) => (
+                          <button
+                            key={preset.val}
+                            type="button"
+                            onClick={() => setPopupScale(preset.val)}
+                            className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all ${
+                              popupScale === preset.val
+                                ? 'bg-brand-red text-white shadow-sm'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                            }`}
+                          >
+                            {preset.label} ({preset.val}%)
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Step 4: Presentation Style */}
                     <div className="space-y-2">
                       <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                        Redirect Link (Optional)
+                        4. Flyer Presentation Style
                       </label>
-                      <input 
-                        type="url"
-                        value={popupLink}
-                        onChange={(e) => setPopupLink(e.target.value)}
-                        placeholder="e.g. https://google.com/special-page"
-                        className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-xs focus:border-brand-red focus:bg-white transition-all"
-                      />
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setPopupShowOverlay(false)}
+                          className={`p-3 rounded-xl border text-left transition-all ${
+                            !popupShowOverlay
+                              ? 'border-brand-red bg-brand-red/5 text-brand-dark'
+                              : 'border-gray-100 bg-gray-50/50 text-gray-500'
+                          }`}
+                        >
+                          <span className="block text-[10px] font-black uppercase">Clean Flyer</span>
+                          <span className="block text-[8px] font-bold text-gray-400">100% visible artwork (Recommended for posters)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPopupShowOverlay(true)}
+                          className={`p-3 rounded-xl border text-left transition-all ${
+                            popupShowOverlay
+                              ? 'border-brand-red bg-brand-red/5 text-brand-dark'
+                              : 'border-gray-100 bg-gray-50/50 text-gray-500'
+                          }`}
+                        >
+                          <span className="block text-[10px] font-black uppercase">Title & Button Overlay</span>
+                          <span className="block text-[8px] font-bold text-gray-400">Dark gradient with CTA button overlay</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Step 5: Optional Title & Link */}
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                          Promotion Title (Optional)
+                        </label>
+                        <input 
+                          type="text"
+                          value={popupTitle}
+                          onChange={(e) => setPopupTitle(e.target.value)}
+                          placeholder="e.g. Mission State Board Test Series"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-xs focus:border-brand-red focus:bg-white transition-all"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                          Redirect Link (Optional)
+                        </label>
+                        <input 
+                          type="url"
+                          value={popupLink}
+                          onChange={(e) => setPopupLink(e.target.value)}
+                          placeholder="e.g. https://bkscience.in/register or leave blank for counseling"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none font-bold text-xs focus:border-brand-red focus:bg-white transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Step 6: Interactive Live Preview & Test */}
+                    <div className="space-y-2 pt-2 border-t border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                          Live In-Panel Preview
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewModalItem({
+                              _id: 'draft-preview',
+                              title: popupTitle || 'Mission State Board Test Series',
+                              link: popupLink,
+                              image: popupPreviewUrl || '/assets/123.jpeg',
+                              orientation: popupOrientation,
+                              scale: popupScale,
+                              showOverlay: popupShowOverlay,
+                              isActive: true
+                            });
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-dark hover:bg-brand-red text-white rounded-lg text-[9px] font-black uppercase tracking-wider shadow-sm transition-all"
+                        >
+                          <Maximize2 size={11} />
+                          Full Screen Test
+                        </button>
+                      </div>
+
+                      {/* Embedded Mini-Viewport */}
+                      <div className="relative bg-slate-950/90 rounded-2xl p-4 border border-slate-800 flex items-center justify-center overflow-hidden min-h-[220px]">
+                        <div className="transform scale-[0.65] origin-center w-full flex justify-center">
+                          <PopupCard
+                            popup={{
+                              title: popupTitle || 'Sample Promotion',
+                              image: popupPreviewUrl || '/assets/123.jpeg',
+                              orientation: popupOrientation,
+                              scale: popupScale,
+                              showOverlay: popupShowOverlay,
+                              link: popupLink
+                            }}
+                            isInteractive={false}
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     {/* Submit Button */}
                     <button 
                       type="submit"
                       disabled={popupLoading}
-                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-brand-red hover:bg-brand-dark text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-brand-red/15 transition-all active:scale-95 disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-brand-red hover:bg-brand-dark text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-brand-red/20 transition-all active:scale-95 disabled:opacity-50"
                     >
                       {popupLoading ? (
                         <>
                           <RefreshCw size={14} className="animate-spin" />
-                          Uploading Banner...
+                          Publishing Popup Banner...
                         </>
                       ) : (
                         <>
@@ -1263,14 +1667,24 @@ const AdminPanel = ({ navigateTo }) => {
                 </div>
 
                 {/* Popups Management List */}
-                <div className="lg:col-span-2 space-y-6">
-                  <div>
-                    <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest">
-                      Active Popup Carousel
-                    </h3>
-                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mt-1">
-                      Toggle active status or remove banners. If multiple are active, they display sequentially inside the popup container.
-                    </p>
+                <div className="lg:col-span-7 space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+                    <div>
+                      <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest">
+                        Configured Popups List
+                      </h3>
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">
+                        {(data.data || []).length} total banners configured in database
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-bold text-gray-400 uppercase">Tip: Click</span>
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-[9px] font-black uppercase inline-flex items-center gap-1">
+                        <Eye size={10} /> Preview
+                      </span>
+                      <span className="text-[9px] font-bold text-gray-400 uppercase">to see exact screen display</span>
+                    </div>
                   </div>
 
                   {loading && (data.data || []).length === 0 ? (
@@ -1283,9 +1697,9 @@ const AdminPanel = ({ navigateTo }) => {
                       <div className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 mb-6">
                         <Upload size={24} />
                       </div>
-                      <h4 className="text-base font-black text-brand-dark uppercase tracking-widest mb-2">No popups configured</h4>
-                      <p className="text-gray-400 font-bold text-xs max-w-sm mb-8 leading-relaxed">
-                        There are currently no custom popup banners uploaded. Upload a banner image to enable promotional counseling popups on the public website.
+                      <h4 className="text-base font-black text-brand-dark uppercase tracking-widest mb-2">No custom popups uploaded yet</h4>
+                      <p className="text-gray-400 font-bold text-xs max-w-sm mb-6 leading-relaxed">
+                        Currently the website shows the fallback career counseling popup. Upload your State Board Test Series flyer or promotional banner on the left to activate custom announcements!
                       </p>
                     </div>
                   ) : (
@@ -1294,19 +1708,25 @@ const AdminPanel = ({ navigateTo }) => {
                         const imgUrl = (popup.image && popup.image.startsWith('/uploads')) 
                           ? `${API_BASE}${popup.image}` 
                           : (popup.image || '');
+                        const orientation = popup.orientation || 'vertical';
+                        const scale = popup.scale || 100;
+                        const isClean = !popup.showOverlay;
+
                         return (
                           <div 
                             key={popup._id} 
                             className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm flex flex-col group hover:shadow-md transition-all duration-300"
                           >
-                            {/* Card Image */}
-                            <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden flex items-center justify-center border-b border-gray-50">
+                            {/* Card Image Thumbnail */}
+                            <div className="aspect-[4/3] bg-slate-900 relative overflow-hidden flex items-center justify-center border-b border-gray-100">
                               <img 
                                 src={imgUrl} 
                                 alt={popup.title} 
                                 className="w-full h-full object-contain group-hover:scale-102 transition-transform duration-500"
                               />
-                              <div className="absolute top-3 left-3 flex gap-2">
+
+                              {/* Badges on Thumbnail */}
+                              <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                                 <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-sm ${
                                   popup.isActive 
                                     ? 'bg-green-500 text-white' 
@@ -1314,49 +1734,120 @@ const AdminPanel = ({ navigateTo }) => {
                                 }`}>
                                   {popup.isActive ? 'Active' : 'Inactive'}
                                 </span>
+
+                                <span className="px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest bg-black/60 text-white backdrop-blur-md">
+                                  {orientation}
+                                </span>
+
+                                <span className="px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest bg-black/60 text-brand-yellow backdrop-blur-md">
+                                  {scale}%
+                                </span>
                               </div>
+
+                              {/* Quick Full-Screen Preview Trigger on hover */}
+                              <button
+                                onClick={() => setPreviewModalItem(popup)}
+                                className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/75 hover:bg-brand-red text-white backdrop-blur-md rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-lg transition-all"
+                              >
+                                <Eye size={12} />
+                                How It Looks
+                              </button>
                             </div>
 
                             {/* Card Details */}
                             <div className="p-5 flex-1 flex flex-col justify-between gap-4">
                               <div className="space-y-2">
-                                <h4 className="font-black text-brand-dark uppercase tracking-tight text-sm leading-tight line-clamp-1">
-                                  {popup.title}
-                                </h4>
+                                <div className="flex items-center justify-between">
+                                  <h4 className="font-black text-brand-dark uppercase tracking-tight text-sm leading-tight line-clamp-1">
+                                    {popup.title || 'Untitled Promotion'}
+                                  </h4>
+                                  <span className="text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-gray-100 text-gray-600">
+                                    {isClean ? 'Clean Flyer' : 'With Overlay'}
+                                  </span>
+                                </div>
+
                                 {popup.link ? (
                                   <a 
                                     href={popup.link} 
                                     target="_blank" 
                                     rel="noreferrer" 
-                                    className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-[10px] font-black uppercase tracking-widest"
+                                    className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-[10px] font-black uppercase tracking-widest truncate max-w-full"
                                   >
-                                    <ExternalLink size={10} /> Link Configured
+                                    <ExternalLink size={10} /> {popup.link}
                                   </a>
                                 ) : (
                                   <span className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">
-                                    Counseling Modal Trigger
+                                    Opens Free Counseling Form
                                   </span>
                                 )}
                               </div>
 
+                              {/* Quick Adjustment Toolbar */}
+                              <div className="flex items-center gap-2 pt-2 border-t border-gray-50">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRotateExisting(popup._id, 'cw')}
+                                  className="flex-1 py-1.5 px-2 bg-slate-900 hover:bg-brand-red text-white rounded-lg text-[9px] font-black uppercase tracking-wider inline-flex items-center justify-center gap-1 transition-all active:scale-95 shadow-sm"
+                                  title="Rotate image 90° clockwise and auto-swap orientation"
+                                >
+                                  <RotateCw size={11} />
+                                  Rotate 90°
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAutoAdjustExisting(popup._id)}
+                                  className="flex-1 py-1.5 px-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 rounded-lg text-[9px] font-black uppercase tracking-wider inline-flex items-center justify-center gap-1 transition-all active:scale-95"
+                                  title="Auto-detect dimensions and set optimal fit"
+                                >
+                                  <Wand2 size={11} />
+                                  Auto-Fit
+                                </button>
+                              </div>
+
                               {/* Card Actions */}
-                              <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                                <button
-                                  onClick={() => handleTogglePopup(popup._id)}
-                                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                                    popup.isActive 
-                                      ? 'bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-100' 
-                                      : 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-100'
-                                  }`}
-                                >
-                                  {popup.isActive ? 'Disable' : 'Enable'}
-                                </button>
-                                <button
-                                  onClick={() => handleDeletePopup(popup._id)}
-                                  className="p-2 text-gray-400 hover:text-brand-red hover:bg-brand-red/5 rounded-xl transition-all"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
+                              <div className="flex items-center justify-between pt-2 border-t border-gray-50 gap-2">
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewModalItem(popup)}
+                                    className="px-3 py-2 bg-slate-100 hover:bg-brand-dark hover:text-white text-slate-700 rounded-xl text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-1 transition-all"
+                                    title="View exact live popup"
+                                  >
+                                    <Eye size={12} />
+                                    Preview
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingPopupItem(popup)}
+                                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-1 transition-all"
+                                    title="Edit settings"
+                                  >
+                                    <Sliders size={12} />
+                                    Settings
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => handleTogglePopup(popup._id)}
+                                    className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                                      popup.isActive 
+                                        ? 'bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-100' 
+                                        : 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-100'
+                                    }`}
+                                  >
+                                    {popup.isActive ? 'Disable' : 'Enable'}
+                                  </button>
+
+                                  <button
+                                    onClick={() => handleDeletePopup(popup._id)}
+                                    className="p-2 text-gray-400 hover:text-brand-red hover:bg-brand-red/5 rounded-xl transition-all"
+                                    title="Delete popup"
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1948,6 +2439,230 @@ const AdminPanel = ({ navigateTo }) => {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── LIVE SCREEN PREVIEW MODAL ("HOW IT WILL LOOK") ── */}
+      {previewModalItem && (
+        <div 
+          className="fixed inset-0 z-[100000] flex flex-col items-center justify-center p-4 md:p-8 bg-black/85 backdrop-blur-md animate-fade-in select-none"
+          onClick={() => setPreviewModalItem(null)}
+        >
+          {/* Top Bar Indicator */}
+          <div 
+            className="absolute top-4 left-4 right-4 md:left-8 md:right-8 z-[100005] flex items-center justify-between pointer-events-none"
+          >
+            <div className="bg-slate-900/90 border border-white/10 px-4 py-2 rounded-2xl flex items-center gap-3 backdrop-blur-md shadow-2xl pointer-events-auto">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <div className="text-left">
+                <p className="text-[10px] font-black text-white uppercase tracking-wider">
+                  Live Screen Simulation Mode
+                </p>
+                <p className="text-[8px] font-bold text-gray-400">
+                  Orientation: <span className="text-brand-yellow uppercase">{previewModalItem.orientation || 'vertical'}</span> • Scale: <span className="text-brand-yellow">{previewModalItem.scale || 100}%</span>
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setPreviewModalItem(null)}
+              className="bg-white/10 hover:bg-brand-red text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-wider backdrop-blur-md border border-white/20 flex items-center gap-1.5 transition-all shadow-xl pointer-events-auto"
+            >
+              <X size={14} /> Exit Preview (ESC)
+            </button>
+          </div>
+
+          {/* Centered Popup Preview Card */}
+          <div 
+            className="relative z-[100002] w-full flex items-center justify-center my-auto animate-pop-in pointer-events-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <PopupCard
+              popup={previewModalItem}
+              onClose={() => setPreviewModalItem(null)}
+              isInteractive={true}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── EDIT POPUP SETTINGS MODAL ── */}
+      {editingPopupItem && (
+        <div className="fixed inset-0 z-[90000] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl border border-gray-100 p-6 md:p-8 space-y-6 animate-fade-scale">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <div>
+                <h3 className="text-base font-black text-brand-dark uppercase tracking-tight">Edit Popup Settings</h3>
+                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Adjust orientation, scaling, and style</p>
+              </div>
+              <button 
+                onClick={() => setEditingPopupItem(null)}
+                className="p-2 text-gray-400 hover:text-brand-red rounded-xl hover:bg-gray-100 transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdatePopup} className="space-y-4">
+              {/* Quick Image Rotate & Auto-Adjust in Modal */}
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await handleRotateExisting(editingPopupItem._id, 'cw');
+                    setEditingPopupItem(prev => ({
+                      ...prev,
+                      orientation: prev.orientation === 'horizontal' ? 'vertical' : 'horizontal'
+                    }));
+                  }}
+                  className="flex-1 py-2 px-3 bg-slate-900 hover:bg-brand-red text-white rounded-xl text-[9px] font-black uppercase tracking-wider inline-flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95"
+                  title="Rotate image 90° clockwise"
+                >
+                  <RotateCw size={12} />
+                  Rotate 90°
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await handleAutoAdjustExisting(editingPopupItem._id);
+                    setEditingPopupItem(prev => ({
+                      ...prev,
+                      scale: 100,
+                      showOverlay: false
+                    }));
+                  }}
+                  className="py-2 px-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 rounded-xl text-[9px] font-black uppercase tracking-wider inline-flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                  title="Auto-detect dimensions and set optimal fit"
+                >
+                  <Wand2 size={12} />
+                  Auto-Fit
+                </button>
+              </div>
+
+              {/* Orientation Setting */}
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                  Layout Orientation
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditingPopupItem(prev => ({ ...prev, orientation: 'vertical' }))}
+                    className={`p-3 rounded-2xl border-2 flex items-center justify-center gap-2 text-center transition-all ${
+                      editingPopupItem.orientation === 'vertical'
+                        ? 'border-brand-red bg-brand-red/5 text-brand-red'
+                        : 'border-gray-100 bg-gray-50 text-gray-500'
+                    }`}
+                  >
+                    <span className="text-[10px] font-black uppercase">Vertical (Portrait)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditingPopupItem(prev => ({ ...prev, orientation: 'horizontal' }))}
+                    className={`p-3 rounded-2xl border-2 flex items-center justify-center gap-2 text-center transition-all ${
+                      editingPopupItem.orientation === 'horizontal'
+                        ? 'border-brand-red bg-brand-red/5 text-brand-red'
+                        : 'border-gray-100 bg-gray-50 text-gray-500'
+                    }`}
+                  >
+                    <span className="text-[10px] font-black uppercase">Horizontal (Landscape)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Scale Slider */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                    Scale Size
+                  </label>
+                  <span className="px-2.5 py-0.5 bg-brand-dark text-white rounded-lg font-black text-[10px]">
+                    {editingPopupItem.scale || 100}%
+                  </span>
+                </div>
+                <input 
+                  type="range"
+                  min="60"
+                  max="140"
+                  step="5"
+                  value={editingPopupItem.scale || 100}
+                  onChange={(e) => setEditingPopupItem(prev => ({ ...prev, scale: Number(e.target.value) }))}
+                  className="w-full accent-brand-red h-2 bg-gray-100 rounded-lg cursor-pointer"
+                />
+              </div>
+
+              {/* Presentation Style */}
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                  Flyer Presentation Style
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingPopupItem(prev => ({ ...prev, showOverlay: false }))}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      !editingPopupItem.showOverlay
+                        ? 'border-brand-red bg-brand-red/5 text-brand-dark font-black'
+                        : 'border-gray-100 bg-gray-50 text-gray-500 font-bold'
+                    } text-[10px] uppercase`}
+                  >
+                    Clean Flyer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPopupItem(prev => ({ ...prev, showOverlay: true }))}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      editingPopupItem.showOverlay
+                        ? 'border-brand-red bg-brand-red/5 text-brand-dark font-black'
+                        : 'border-gray-100 bg-gray-50 text-gray-500 font-bold'
+                    } text-[10px] uppercase`}
+                  >
+                    With Overlay
+                  </button>
+                </div>
+              </div>
+
+              {/* Title & Link */}
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Title</label>
+                  <input 
+                    type="text"
+                    value={editingPopupItem.title || ''}
+                    onChange={(e) => setEditingPopupItem(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Redirect Link</label>
+                  <input 
+                    type="url"
+                    value={editingPopupItem.link || ''}
+                    onChange={(e) => setEditingPopupItem(prev => ({ ...prev, link: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={popupLoading}
+                  className="flex-1 py-3.5 bg-brand-red text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-dark transition-all shadow-lg shadow-brand-red/20"
+                >
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingPopupItem(null)}
+                  className="px-5 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
