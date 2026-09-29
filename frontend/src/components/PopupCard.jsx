@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Sparkles, ExternalLink } from 'lucide-react';
-import { API_BASE } from '../api';
+import { getMediaUrl } from '../api';
 
 const PopupCard = ({
   popup,
@@ -11,6 +11,15 @@ const PopupCard = ({
 }) => {
   if (!popup) return null;
 
+  const [imgSrc, setImgSrc] = useState(() => getMediaUrl(popup.image));
+  const [imgError, setImgError] = useState(false);
+
+  // Sync if popup.image changes
+  React.useEffect(() => {
+    setImgSrc(getMediaUrl(popup.image));
+    setImgError(false);
+  }, [popup.image]);
+
   const orientation = popup.orientation || 'vertical';
   const scale = (typeof popup.scale === 'number' && popup.scale >= 50 && popup.scale <= 160) 
     ? popup.scale 
@@ -18,12 +27,6 @@ const PopupCard = ({
   const scaleFactor = scale / 100;
   const showOverlay = Boolean(popup.showOverlay);
   const isHorizontal = orientation === 'horizontal';
-
-  // Resolve image URL (supports object-urls from preview, /uploads, or absolute urls)
-  let imageUrl = popup.image || '';
-  if (typeof imageUrl === 'string' && imageUrl.startsWith('/uploads')) {
-    imageUrl = `${API_BASE}${imageUrl}`;
-  }
 
   // Base widths
   const baseWidth = isHorizontal ? 800 : 430;
@@ -71,12 +74,23 @@ const PopupCard = ({
         }`}
       >
         <img
-          src={imageUrl}
+          src={imgSrc}
           alt={popup.title || 'BK Science Academy Announcement'}
           className={`w-full object-contain ${
             isHorizontal ? 'h-full max-h-[75vh]' : 'h-auto max-h-[80vh]'
           } transition-transform duration-500 hover:scale-[1.015]`}
           loading="eager"
+          onError={() => {
+            if (!imgError) {
+              setImgError(true);
+              // If failed with /api/uploads/, try /uploads/ or clean URL as fallback
+              if (imgSrc.includes('/api/uploads/')) {
+                setImgSrc(imgSrc.replace('/api/uploads/', '/uploads/'));
+              } else if (imgSrc.includes('/uploads/')) {
+                setImgSrc(imgSrc.replace('/uploads/', '/api/uploads/'));
+              }
+            }
+          }}
         />
 
         {/* Ambient Overlay (only if showOverlay is enabled) */}

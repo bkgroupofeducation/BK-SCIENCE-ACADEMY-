@@ -2,24 +2,41 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Smartphone, Sparkles, Download } from 'lucide-react';
 
-const AppPopup = () => {
+const AppPopup = ({ isAdOpen = false }) => {
   const [isVisible, setIsVisible] = useState(false);
   const playStoreUrl = 'https://play.google.com/store/apps/details?id=co.lazarus.qzrty&pcampaignid=web_share';
 
   useEffect(() => {
+    // If dismissed previously in this session, do not re-trigger
+    if (sessionStorage.getItem('bk_app_popup_dismissed') === 'true') {
+      return;
+    }
+
+    // Only show after delay and when ad popup is not open
     const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, 12000); // 12 seconds
+      if (!isAdOpen && sessionStorage.getItem('bk_app_popup_dismissed') !== 'true') {
+        setIsVisible(true);
+      }
+    }, 25000); // 25 seconds delay
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [isAdOpen]);
+
+  // If AdPopup opens while AppPopup is active, close AppPopup immediately
+  useEffect(() => {
+    if (isAdOpen && isVisible) {
+      setIsVisible(false);
+    }
+  }, [isAdOpen, isVisible]);
 
   const handleClose = (e) => {
     e.stopPropagation();
     setIsVisible(false);
+    sessionStorage.setItem('bk_app_popup_dismissed', 'true');
   };
 
   const handleClick = () => {
+    sessionStorage.setItem('bk_app_popup_dismissed', 'true');
     window.open(playStoreUrl, '_blank');
     setIsVisible(false);
   };

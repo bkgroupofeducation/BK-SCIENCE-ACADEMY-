@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CounselingForm from './CounselingForm';
-import { API_BASE } from '../api';
+import { API_BASE, getMediaUrl } from '../api';
 
 const Hero = ({ navigateTo }) => {
   const [formData, setFormData] = useState({
@@ -79,7 +79,7 @@ const Hero = ({ navigateTo }) => {
             name: t.name,
             college: t.exam || 'Success Story',
             quote: t.quote || 'Watch my journey with BK Science Academy.',
-            image: t.image ? (t.image.startsWith('/uploads') ? `${API_BASE}${t.image}` : t.image) : '/assets/ranker1.png',
+            image: t.image ? getMediaUrl(t.image) : '/assets/ranker1.png',
             video: t.videoUrl
           }));
           setToppers(formatted);

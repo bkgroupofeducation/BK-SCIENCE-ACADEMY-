@@ -3,10 +3,14 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { API_BASE } from '../api';
 import PopupCard from './PopupCard';
 
-const AdPopup = ({ onOpenCounseling }) => {
+const AdPopup = ({ onOpenCounseling, onVisibilityChange }) => {
   const [popups, setPopups] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    onVisibilityChange?.(isVisible);
+  }, [isVisible, onVisibilityChange]);
 
   useEffect(() => {
     const fetchPopups = async () => {

@@ -7,6 +7,7 @@ if (dotenvResult.error) {
 }
 
 // 2. Import Dependencies
+const fs = require('fs');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -85,8 +86,26 @@ app.get('/api/health', (req, res) => res.status(200).json({
   timestamp: new Date().toISOString()
 }));
 
-// 7. Static File Serving (For VPS Nginx setup)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// 7. Static File Serving (Uploads & Frontend)
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Serve uploads at both /uploads and /api/uploads (for Nginx reverse proxy compatibility)
+app.use('/uploads', express.static(uploadsDir));
+app.use('/api/uploads', express.static(uploadsDir));
+
+// Fallback explicit route for uploads in case express.static misses query parameters
+app.get(['/api/uploads/:filename', '/uploads/:filename'], (req, res) => {
+  const safeFilename = path.basename(req.params.filename.split('?')[0]);
+  const filePath = path.join(uploadsDir, safeFilename);
+  if (fs.existsSync(filePath)) {
+    return res.sendFile(filePath);
+  }
+  return res.status(404).json({ success: false, message: 'Upload not found' });
+});
+
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // SPA Fallback

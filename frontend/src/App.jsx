@@ -80,6 +80,7 @@ function App() {
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const [showCounseling, setShowCounseling] = React.useState(false);
   const [activePolicy, setActivePolicy] = React.useState({ isOpen: false, type: '' });
+  const [isAdOpen, setIsAdOpen] = React.useState(false);
 
 
   const navigateTo = (v) => {
@@ -251,8 +252,11 @@ function App() {
 
       {location.pathname !== '/admin-portal' && (
         <>
-          <AdPopup onOpenCounseling={() => setShowCounseling(true)} />
-          <AppPopup />
+          <AdPopup 
+            onOpenCounseling={() => setShowCounseling(true)} 
+            onVisibilityChange={setIsAdOpen}
+          />
+          <AppPopup isAdOpen={isAdOpen} />
         </>
       )}
 

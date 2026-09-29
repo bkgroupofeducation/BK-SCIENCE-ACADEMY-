@@ -5,6 +5,27 @@
 export const API_BASE = ''; // Use relative paths for production compatibility
 
 /**
+ * Resolves uploaded media URLs ensuring compatibility with Nginx reverse proxy.
+ * Paths starting with /uploads/ are routed through /api/uploads/ to reach Express.
+ */
+export function getMediaUrl(path) {
+  if (!path || typeof path !== 'string') return '';
+  if (
+    path.startsWith('blob:') || 
+    path.startsWith('data:') || 
+    path.startsWith('http://') || 
+    path.startsWith('https://')
+  ) {
+    return path;
+  }
+  let clean = path;
+  if (clean.startsWith('/uploads/')) {
+    clean = `/api/uploads/${clean.replace(/^\/uploads\//, '')}`;
+  }
+  return `${API_BASE}${clean}`;
+}
+
+/**
  * Lightweight fetch wrapper with default JSON headers.
  * Throws on non-2xx responses with the server's message.
  */

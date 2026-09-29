@@ -8,7 +8,7 @@ import {
   Sliders, Maximize2, Check, RotateCw, RotateCcw, Wand2
 } from 'lucide-react';
 import PopupCard from './PopupCard';
-import { apiFetch, API_BASE } from '../api';
+import { apiFetch, API_BASE, getMediaUrl } from '../api';
 
 /* ─── Session helpers ─────────────────────────────────── */
 const TOKEN_KEY  = 'bk_admin_token';
@@ -1083,7 +1083,7 @@ const AdminPanel = ({ navigateTo }) => {
                               <div className="w-12 h-12 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0 bg-gray-50 flex items-center justify-center relative">
                                 {item.photo || item.image ? (
                                   <img 
-                                    src={(item.photo || item.image).startsWith('/uploads') ? `${API_BASE}${item.photo || item.image}` : (item.photo || item.image)} 
+                                    src={getMediaUrl(item.photo || item.image)} 
                                     alt="" 
                                     className="w-full h-full object-cover" 
                                   />
@@ -1227,7 +1227,7 @@ const AdminPanel = ({ navigateTo }) => {
                           <div className="w-16 h-16 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0 bg-gray-50 flex items-center justify-center relative">
                             {item.photo || item.image ? (
                               <img 
-                                src={(item.photo || item.image).startsWith('/uploads') ? `${API_BASE}${item.photo || item.image}` : (item.photo || item.image)} 
+                                src={getMediaUrl(item.photo || item.image)} 
                                 alt="" 
                                 className="w-full h-full object-cover" 
                               />
@@ -1705,9 +1705,7 @@ const AdminPanel = ({ navigateTo }) => {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       {(data.data || []).map((popup) => {
-                        const imgUrl = (popup.image && popup.image.startsWith('/uploads')) 
-                          ? `${API_BASE}${popup.image}` 
-                          : (popup.image || '');
+                        const imgUrl = getMediaUrl(popup.image);
                         const orientation = popup.orientation || 'vertical';
                         const scale = popup.scale || 100;
                         const isClean = !popup.showOverlay;
@@ -1723,6 +1721,14 @@ const AdminPanel = ({ navigateTo }) => {
                                 src={imgUrl} 
                                 alt={popup.title} 
                                 className="w-full h-full object-contain group-hover:scale-102 transition-transform duration-500"
+                                onError={(e) => {
+                                  // Fallback swap between /api/uploads/ and /uploads/ if one fails
+                                  if (e.target.src.includes('/api/uploads/')) {
+                                    e.target.src = e.target.src.replace('/api/uploads/', '/uploads/');
+                                  } else if (e.target.src.includes('/uploads/')) {
+                                    e.target.src = e.target.src.replace('/uploads/', '/api/uploads/');
+                                  }
+                                }}
                               />
 
                               {/* Badges on Thumbnail */}

@@ -68,6 +68,11 @@ jobs:
             tar -xzf dist.tar.gz
             rm -f dist.tar.gz
 
+            echo "🔗 Linking Uploads Storage for Direct Nginx Serving..."
+            mkdir -p "$APP_PATH/backend/uploads"
+            mkdir -p "$APP_PATH/frontend/dist"
+            ln -sfn "$APP_PATH/backend/uploads" "$APP_PATH/frontend/dist/uploads" || true
+
             echo "⚙️ Installing Backend Dependencies..."
             cd "$APP_PATH/backend" || { echo "❌ Backend folder not found!"; exit 1; }
             npm install --legacy-peer-deps || { echo "❌ Backend npm install failed!"; exit 1; }

@@ -27,11 +27,22 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit for high-quality popups
 });
 
+// Helper to normalize popup object so images are accessed via /api/uploads (proxied by Nginx)
+const normalizePopup = (popupDoc) => {
+  const popup = popupDoc && popupDoc.toObject ? popupDoc.toObject() : { ...popupDoc };
+  if (popup && popup.image && typeof popup.image === 'string') {
+    if (popup.image.startsWith('/uploads/')) {
+      popup.image = `/api/uploads/${popup.image.replace(/^\/uploads\//, '')}`;
+    }
+  }
+  return popup;
+};
+
 // GET /api/popups - Publicly fetch active popups
 router.get('/', async (req, res) => {
   try {
     const popups = await Popup.find({ isActive: true }).sort({ createdAt: -1 });
-    res.json({ success: true, data: popups });
+    res.json({ success: true, data: popups.map(normalizePopup) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -41,7 +52,7 @@ router.get('/', async (req, res) => {
 router.get('/all', requireAuth, async (req, res) => {
   try {
     const popups = await Popup.find().sort({ createdAt: -1 });
-    res.json({ success: true, data: popups });
+    res.json({ success: true, data: popups.map(normalizePopup) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -56,7 +67,8 @@ router.post('/upload', requireAuth, upload.single('image'), logAction('CREATE', 
     }
 
     const { title, link, orientation, scale, showOverlay, rotation } = req.body;
-    const imageUrl = `/uploads/${uploadedFile.filename}`;
+    // Always store as /api/uploads/... so that frontend and Nginx directly proxy to Express
+    const imageUrl = `/api/uploads/${uploadedFile.filename}`;
 
     const parsedScale = parseInt(scale, 10);
     const validScale = (!isNaN(parsedScale) && parsedScale >= 50 && parsedScale <= 160) ? parsedScale : 100;
@@ -75,7 +87,7 @@ router.post('/upload', requireAuth, upload.single('image'), logAction('CREATE', 
       isActive: true
     });
 
-    res.status(201).json({ success: true, data: popup });
+    res.status(201).json({ success: true, data: normalizePopup(popup) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -112,13 +124,20 @@ router.put('/:id', requireAuth, logAction('UPDATE', 'POPUP'), async (req, res) =
     }
 
     await popup.save();
-    res.json({ success: true, data: popup });
+    res.json({ success: true, data: normalizePopup(popup) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
 const { execSync } = require('child_process');
+
+// Helper to resolve physical file path from any image URL format (/api/uploads/... or /uploads/...)
+const getPhysicalFilePath = (imgUrl) => {
+  if (!imgUrl) return null;
+  const filename = path.basename(imgUrl.split('?')[0]);
+  return path.join(uploadDir, filename);
+};
 
 // PUT /api/popups/:id/rotate - Admin only rotate +90deg & auto-swap orientation
 router.put('/:id/rotate', requireAuth, logAction('UPDATE', 'POPUP'), async (req, res) => {
@@ -131,14 +150,20 @@ router.put('/:id/rotate', requireAuth, logAction('UPDATE', 'POPUP'), async (req,
     const { direction } = req.body || {}; // 'cw' (default 90 deg clockwise) or 'ccw' (90 deg counter-clockwise)
     const pilDegrees = direction === 'ccw' ? 90 : 270; // In PIL, 270 is 90 deg clockwise
 
-    if (popup.image && popup.image.startsWith('/uploads/')) {
-      const fullPath = path.join(__dirname, '..', popup.image.split('?')[0]);
-      if (fs.existsSync(fullPath)) {
+    const fullPath = getPhysicalFilePath(popup.image);
+    if (fullPath && fs.existsSync(fullPath)) {
+      const pyCode = `from PIL import Image; im = Image.open(r'''${fullPath}'''); im.rotate(${pilDegrees}, expand=True).save(r'''${fullPath}''')`;
+      const pythonBins = process.platform === 'win32' ? ['python', 'py', 'python3'] : ['python3', 'python'];
+      let rotated = false;
+      for (const bin of pythonBins) {
         try {
-          execSync(`python -c "from PIL import Image; im = Image.open(r'''${fullPath}'''); im.rotate(${pilDegrees}, expand=True).save(r'''${fullPath}''')"`);
-        } catch (pyErr) {
-          console.warn('Physical rotation failed, falling back to rotation property:', pyErr.message);
-        }
+          execSync(`${bin} -c "${pyCode}"`, { stdio: 'pipe' });
+          rotated = true;
+          break;
+        } catch (e) {}
+      }
+      if (!rotated) {
+        console.warn('Physical rotation command could not run python/PIL.');
       }
     }
 
@@ -149,11 +174,12 @@ router.put('/:id/rotate', requireAuth, logAction('UPDATE', 'POPUP'), async (req,
     popup.orientation = popup.orientation === 'horizontal' ? 'vertical' : 'horizontal';
 
     // Touch image path with timestamp to invalidate browser cache
-    const basePath = popup.image.split('?')[0];
-    popup.image = `${basePath}?t=${Date.now()}`;
+    const cleanImgPath = popup.image.split('?')[0];
+    const normalizedImg = cleanImgPath.startsWith('/uploads/') ? `/api/uploads/${cleanImgPath.replace(/^\/uploads\//, '')}` : cleanImgPath;
+    popup.image = `${normalizedImg}?t=${Date.now()}`;
 
     await popup.save();
-    res.json({ success: true, data: popup });
+    res.json({ success: true, data: normalizePopup(popup) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -167,25 +193,31 @@ router.put('/:id/auto-adjust', requireAuth, logAction('UPDATE', 'POPUP'), async 
       return res.status(404).json({ success: false, message: 'Popup not found' });
     }
 
-    if (popup.image && popup.image.startsWith('/uploads/')) {
-      const fullPath = path.join(__dirname, '..', popup.image.split('?')[0]);
-      if (fs.existsSync(fullPath)) {
+    const fullPath = getPhysicalFilePath(popup.image);
+    if (fullPath && fs.existsSync(fullPath)) {
+      const pyCode = `from PIL import Image; im = Image.open(r'''${fullPath}'''); print(f'{im.size[0]},{im.size[1]}')`;
+      const pythonBins = process.platform === 'win32' ? ['python', 'py', 'python3'] : ['python3', 'python'];
+      for (const bin of pythonBins) {
         try {
-          const output = execSync(`python -c "from PIL import Image; im = Image.open(r'''${fullPath}'''); print(f'{im.size[0]},{im.size[1]}')"`).toString().trim();
+          const output = execSync(`${bin} -c "${pyCode}"`, { stdio: 'pipe' }).toString().trim();
           const [w, h] = output.split(',').map(Number);
           if (w && h) {
             popup.orientation = w >= h ? 'horizontal' : 'vertical';
+            break;
           }
-        } catch (pyErr) {
-          console.warn('Auto adjust failed:', pyErr.message);
-        }
+        } catch (e) {}
       }
     }
 
     popup.scale = 100;
     popup.showOverlay = false; // Keep clean flyer view
+    const cleanImgPath = popup.image.split('?')[0];
+    if (cleanImgPath.startsWith('/uploads/')) {
+      popup.image = `/api/uploads/${cleanImgPath.replace(/^\/uploads\//, '')}`;
+    }
+
     await popup.save();
-    res.json({ success: true, data: popup });
+    res.json({ success: true, data: normalizePopup(popup) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -202,7 +234,7 @@ router.put('/:id/toggle', requireAuth, logAction('UPDATE', 'POPUP'), async (req,
     popup.isActive = !popup.isActive;
     await popup.save();
 
-    res.json({ success: true, data: popup });
+    res.json({ success: true, data: normalizePopup(popup) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -217,11 +249,11 @@ router.delete('/:id', requireAuth, logAction('DELETE', 'POPUP'), async (req, res
     }
 
     // Attempt to delete physical file
-    if (popup.image && popup.image.startsWith('/uploads/')) {
-      const filePath = path.join(__dirname, '..', popup.image);
-      if (fs.existsSync(filePath)) {
+    const filePath = getPhysicalFilePath(popup.image);
+    if (filePath && fs.existsSync(filePath)) {
+      try {
         fs.unlinkSync(filePath);
-      }
+      } catch (unlinkErr) {}
     }
 
     await popup.deleteOne();
