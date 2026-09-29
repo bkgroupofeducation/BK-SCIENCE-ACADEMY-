@@ -38,20 +38,20 @@ const normalizePopup = (popupDoc) => {
   return popup;
 };
 
-// GET /api/popups - Publicly fetch active popups
+// GET /api/popups - Publicly fetch active popups in sequence
 router.get('/', async (req, res) => {
   try {
-    const popups = await Popup.find({ isActive: true }).sort({ createdAt: -1 });
+    const popups = await Popup.find({ isActive: true }).sort({ order: 1, createdAt: 1 });
     res.json({ success: true, data: popups.map(normalizePopup) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// GET /api/popups/all - Admin only fetch all popups
+// GET /api/popups/all - Admin only fetch all popups in sequence
 router.get('/all', requireAuth, async (req, res) => {
   try {
-    const popups = await Popup.find().sort({ createdAt: -1 });
+    const popups = await Popup.find().sort({ order: 1, createdAt: 1 });
     res.json({ success: true, data: popups.map(normalizePopup) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -101,7 +101,7 @@ router.put('/:id', requireAuth, logAction('UPDATE', 'POPUP'), async (req, res) =
       return res.status(404).json({ success: false, message: 'Popup not found' });
     }
 
-    const { title, link, orientation, scale, showOverlay, rotation, isActive } = req.body;
+    const { title, link, orientation, scale, showOverlay, rotation, isActive, order } = req.body;
     if (title !== undefined) popup.title = title;
     if (link !== undefined) popup.link = link;
     if (orientation !== undefined && ['horizontal', 'vertical'].includes(orientation)) {
@@ -121,6 +121,9 @@ router.put('/:id', requireAuth, logAction('UPDATE', 'POPUP'), async (req, res) =
     }
     if (isActive !== undefined) {
       popup.isActive = Boolean(isActive);
+    }
+    if (order !== undefined && !isNaN(Number(order))) {
+      popup.order = Number(order);
     }
 
     await popup.save();

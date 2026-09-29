@@ -7,7 +7,9 @@ const PopupCard = ({
   onClose,
   onClick,
   isInteractive = true,
-  className = ''
+  className = '',
+  stepInfo = null,
+  hasNext = false
 }) => {
   if (!popup) return null;
 
@@ -49,20 +51,27 @@ const PopupCard = ({
       }}
       className={`relative bg-slate-900 rounded-[2rem] overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.5)] border border-white/10 flex flex-col mx-auto select-none transition-all duration-300 ${className}`}
     >
-      {/* Floating Close Button */}
-      {onClose && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
-          className="absolute top-3.5 right-3.5 z-40 w-8 h-8 md:w-9 md:h-9 bg-black/70 hover:bg-brand-red text-white backdrop-blur-md rounded-full flex items-center justify-center shadow-lg border border-white/15 transition-all duration-200 active:scale-90"
-          title="Close Popup"
-        >
-          <X size={16} strokeWidth={2.5} />
-        </button>
-      )}
+      {/* Floating Top Controls */}
+      <div className="absolute top-3.5 right-3.5 z-40 flex items-center gap-2">
+        {stepInfo && (
+          <span className="px-2.5 py-1 bg-black/75 backdrop-blur-md rounded-full text-[9px] font-black uppercase tracking-widest text-brand-yellow border border-white/15 shadow-lg">
+            {stepInfo}
+          </span>
+        )}
+        {onClose && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="w-8 h-8 md:w-9 md:h-9 bg-black/75 hover:bg-brand-red text-white backdrop-blur-md rounded-full flex items-center justify-center shadow-lg border border-white/15 transition-all duration-200 active:scale-90"
+            title={hasNext ? "Next Announcement" : "Close"}
+          >
+            <X size={16} strokeWidth={2.5} />
+          </button>
+        )}
+      </div>
 
       {/* Main Image Container */}
       <div

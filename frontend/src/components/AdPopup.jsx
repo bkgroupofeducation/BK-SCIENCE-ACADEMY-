@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE } from '../api';
 import PopupCard from './PopupCard';
 
@@ -64,8 +65,16 @@ const AdPopup = ({ onOpenCounseling, onVisibilityChange }) => {
     fetchPopups();
   }, []);
 
+  // When closing this popup: advance to the next announcement if one exists!
   const handleClose = () => {
-    setIsVisible(false);
+    if (currentIndex < popups.length - 1) {
+      // Advance to next announcement in sequence (e.g. from Mission Test Series to Time Table)
+      setCurrentIndex((prev) => prev + 1);
+    } else {
+      // All popups seen, close modal
+      setIsVisible(false);
+      sessionStorage.setItem('bk_ad_popup_dismissed', 'true');
+    }
   };
 
   const handlePopupClick = (popup) => {
@@ -74,6 +83,7 @@ const AdPopup = ({ onOpenCounseling, onVisibilityChange }) => {
     } else {
       onOpenCounseling();
     }
+    // Also advance to next popup if available
     handleClose();
   };
 
@@ -93,7 +103,7 @@ const AdPopup = ({ onOpenCounseling, onVisibilityChange }) => {
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-6 md:p-8 overflow-y-auto bg-black/80 backdrop-blur-md animate-fade-in">
-      {/* Backdrop Close Handler */}
+      {/* Backdrop Close Handler (advances to next popup or closes when on last) */}
       <div 
         className="absolute inset-0 cursor-default"
         onClick={handleClose}
@@ -113,13 +123,28 @@ const AdPopup = ({ onOpenCounseling, onVisibilityChange }) => {
             </button>
           )}
 
-          {/* Popup Card */}
-          <PopupCard
-            popup={currentPopup}
-            onClose={handleClose}
-            onClick={handlePopupClick}
-            isInteractive={true}
-          />
+          {/* Animated Popup Card */}
+          <div className="w-full flex items-center justify-center min-h-[360px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentPopup._id || currentIndex}
+                initial={{ opacity: 0, scale: 0.94, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.94, y: -15 }}
+                transition={{ duration: 0.28, ease: 'easeOut' }}
+                className="w-full flex justify-center"
+              >
+                <PopupCard
+                  popup={currentPopup}
+                  onClose={handleClose}
+                  onClick={handlePopupClick}
+                  isInteractive={true}
+                  stepInfo={popups.length > 1 ? `${currentIndex + 1}/${popups.length}` : null}
+                  hasNext={currentIndex < popups.length - 1}
+                />
+              </motion.div>
+            </AnimatePresence>
+          </div>
 
           {/* Next Arrow for Carousel */}
           {popups.length > 1 && (

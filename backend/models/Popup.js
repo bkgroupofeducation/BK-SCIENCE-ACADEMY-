@@ -8,7 +8,8 @@ const PopupSchema = new mongoose.Schema({
   orientation: { type: String, enum: ['vertical', 'horizontal'], default: 'vertical' },
   scale: { type: Number, default: 100 }, // percentage: 60 to 150
   showOverlay: { type: Boolean, default: false }, // whether to show gradient & title overlay or clean flyer
-  rotation: { type: Number, default: 0 } // 0, 90, 180, 270 degrees
+  rotation: { type: Number, default: 0 }, // 0, 90, 180, 270 degrees
+  order: { type: Number, default: 0 } // sequence display order
 }, { timestamps: true });
 
 module.exports = mongoose.model('Popup', PopupSchema);
